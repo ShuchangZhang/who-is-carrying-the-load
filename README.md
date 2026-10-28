@@ -12,7 +12,7 @@
 
 ### 核心功能
 
-- **独立成员入口。** 用户可以创建家庭空间并生成邀请码或邀请链接，受邀成员只进入自己的记录页面。
+- **独立成员入口。** 用户可以创建家庭空间并生成邀请码或邀请链接，受邀成员只进入自己的记录页面，也可以随时加入其他家庭或离开当前家庭。
 - **本地文本分析。** 浏览器内的中文规则引擎会识别健康照护、饮食、清洁、账单、孩子成长等家庭领域，以及计划、提醒、协调、执行和跟进等劳动类型。
 - **动态劳动冰山。** 用户输入会真实改变水面上的可见执行，以及水面下的计划、提醒和持续责任。
 - **双视角对照。** 系统直接引用双方的原始记录，展示同一家庭领域中不同成员关注的环节。
@@ -69,7 +69,7 @@ python3 -m http.server 4173 --directory dist
 
 ### Key features
 
-- **Independent member entry.** Create a household, generate an invite code or link, and give every member a private input flow.
+- **Independent member entry.** Create a household, generate an invite code or link, give every member a private input flow, and let users join another household or leave the current one at any time.
 - **Local text analysis.** A browser-based Chinese rules engine detects household domains and distinguishes planning, reminding, coordinating, execution, and follow-up work.
 - **Dynamic labor iceberg.** User input directly changes the visible tasks above water and the mental load shown below the surface.
 - **Two-perspective comparison.** The product quotes each member's original wording to reveal different views of the same household domain.

@@ -89,7 +89,26 @@ function openOnboarding(mode) {
   $("#createPanel").classList.toggle("hidden", joining); $("#joinPanel").classList.toggle("hidden", !joining);
   $("#onboardingEyebrow").textContent = joining ? "加入家庭空间" : "创建家庭空间";
   $("#onboardingTitle").textContent = joining ? "输入家人发给你的邀请码。" : "先给你们的家庭起个名字。";
-  $("#onboardingDescription").textContent = joining ? "加入后，你只需要在自己的手机上填写自己的记录。" : "创建后会得到一个邀请码和邀请链接，其他成员可以在自己的手机上加入。";
+  $("#onboardingDescription").textContent = joining ? (state.family ? `你目前在“${state.family.name}”。加入其他家庭后，本浏览器会切换到新的家庭空间。` : "加入后，你只需要在自己的手机上填写自己的记录。") : "创建后会得到一个邀请码和邀请链接，其他成员可以在自己的手机上加入。";
+}
+
+function openLeaveModal() {
+  if (!state.family) return;
+  $("#leaveFamilyName").textContent = state.family.name;
+  $("#leaveModal").classList.remove("hidden");
+  $("#cancelLeaveButton").focus();
+}
+
+function closeLeaveModal() { $("#leaveModal").classList.add("hidden"); }
+
+function leaveFamily() {
+  const familyName = state.family?.name || "当前家庭";
+  state = { family: null, currentMemberId: null, assignments: {}, demo: false };
+  localStorage.removeItem(STORAGE_KEY);
+  history.replaceState({}, "", location.pathname);
+  closeLeaveModal();
+  showSection("hero");
+  showToast(`已离开“${familyName}”，本地家庭记录已清除。`);
 }
 
 function createFamily() {
@@ -239,6 +258,12 @@ $("#createFamilyButton").addEventListener("click", () => openOnboarding("create"
 $("#joinFamilyButton").addEventListener("click", () => openOnboarding("join"));
 $("#demoButton").addEventListener("click", loadDemoFamily);
 $("#confirmCreateButton").addEventListener("click", createFamily); $("#confirmJoinButton").addEventListener("click", joinFamily);
+$("#joinAnotherButton").addEventListener("click", () => openOnboarding("join"));
+$("#leaveFamilyButton").addEventListener("click", openLeaveModal);
+$("#cancelLeaveButton").addEventListener("click", closeLeaveModal);
+$("#confirmLeaveButton").addEventListener("click", leaveFamily);
+$("#leaveModal").addEventListener("click", (event) => { if (event.target === $("#leaveModal")) closeLeaveModal(); });
+document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !$("#leaveModal").classList.contains("hidden")) closeLeaveModal(); });
 $("#recordMineButton").addEventListener("click", openRecord); $("#backToFamily").addEventListener("click", () => { renderFamily(); showSection("familySpace"); });
 $("#memberInput").addEventListener("input", (event) => $("#analysisPreview").querySelector("strong").textContent = recognizedSummary(event.target.value));
 $$('[data-prompt]').forEach((button) => button.addEventListener("click", () => { const field = $("#memberInput"); field.value += `${field.value ? "\n" : ""}${button.dataset.prompt}`; field.focus(); field.dispatchEvent(new Event("input")); }));
@@ -246,7 +271,12 @@ $("#submitRecordButton").addEventListener("click", submitRecord); $("#simulateFa
 $("#copyCodeButton").addEventListener("click", () => copyInvite("code")); $("#copyLinkButton").addEventListener("click", () => copyInvite("link")); $("#waitingCopyLink").addEventListener("click", () => copyInvite("link"));
 $("#viewResultsButton").addEventListener("click", () => { renderResults(); showSection("results"); }); $("#resultsBack").addEventListener("click", () => { renderFamily(); showSection("familySpace"); });
 $("#exportButton").addEventListener("click", exportPlan);
-$$('[data-nav]').forEach((button) => button.addEventListener("click", () => { if (!state.family) openOnboarding(button.dataset.nav === "record" ? "create" : "join"); else if (button.dataset.nav === "record") openRecord(); else { renderFamily(); showSection("familySpace"); } }));
+$$('[data-nav]').forEach((button) => button.addEventListener("click", () => {
+  const target = button.dataset.nav;
+  if (target === "join") { openOnboarding("join"); return; }
+  if (!state.family) { openOnboarding("create"); return; }
+  if (target === "record") openRecord(); else { renderFamily(); showSection("familySpace"); }
+}));
 
 const joinCode = new URLSearchParams(location.search).get("join");
 if (joinCode) { $("#inviteCodeInput").value = joinCode; openOnboarding("join"); }

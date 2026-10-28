@@ -18,6 +18,7 @@
         <nav class="header-nav" aria-label="主导航">
           <button class="nav-button" data-nav="family">我的家庭</button>
           <button class="nav-button" data-nav="record">我的记录</button>
+          <button class="nav-button nav-join" data-nav="join">加入家庭</button>
           <span class="privacy-note"><i></i>记录默认仅自己可见</span>
         </nav>
       </header>
@@ -72,7 +73,11 @@
           <div class="family-banner">
             <div class="family-identity"><span class="family-icon">⌂</span><div><p>家庭空间</p><h2 id="familyDisplayName">松果之家</h2></div></div>
             <div class="invite-box"><span>家庭邀请码</span><strong id="inviteCode">SG4826</strong><button id="copyCodeButton" aria-label="复制邀请码">复制</button></div>
-            <button class="button button-light" id="copyLinkButton">复制邀请链接</button>
+            <div class="family-controls">
+              <button class="button button-light" id="copyLinkButton">复制邀请链接</button>
+              <button class="button button-outline-light" id="joinAnotherButton">加入其他家庭</button>
+              <button class="button button-danger-light" id="leaveFamilyButton">离开家庭</button>
+            </div>
           </div>
           <div class="family-grid">
             <article class="family-main-card">
@@ -145,6 +150,15 @@
       </main>
 
       <footer><div class="brand footer-brand"><span class="brand-mark"><i></i><i></i><i></i></span><span>谁在操心</span></div><p>让劳动被看见，让责任能被共同承担。</p><span>概念 Demo · 本地规则分析</span></footer>
+    </div>
+    <div class="modal-backdrop hidden" id="leaveModal" role="dialog" aria-modal="true" aria-labelledby="leaveModalTitle">
+      <div class="modal-card">
+        <span class="modal-icon">↗</span>
+        <p class="eyebrow">离开家庭</p>
+        <h2 id="leaveModalTitle">确定离开“<span id="leaveFamilyName">当前家庭</span>”吗？</h2>
+        <p>离开后，这个浏览器里保存的家庭成员关系、个人记录和责任调整都会被清除。演示版没有云端账户，因此无法在离开后自动恢复。</p>
+        <div class="modal-actions"><button class="button button-quiet" id="cancelLeaveButton">取消</button><button class="button button-danger" id="confirmLeaveButton">确认离开并清除记录</button></div>
+      </div>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="app.js"></script>
