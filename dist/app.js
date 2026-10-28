@@ -4,7 +4,7 @@ const STORAGE_KEY = "who_cares_family_v2";
 
 const CATEGORIES = {
   health: { name: "健康照护", icon: "🩺", keywords: ["医院", "体检", "看病", "吃药", "药房", "复诊", "健康", "生病", "医生"], steps: ["发现健康需求", "比较医院与时间", "完成预约", "准备证件", "设置提醒", "现场陪同", "记录医嘱", "后续观察"] },
-  meals: { name: "一周饮食", icon: "🍲", keywords: ["做饭", "晚饭", "早餐", "午饭", "吃什么", "食材", "菜", "烹饪", "外卖"], steps: ["确认家人时间", "决定吃什么", "查看现有食材", "考虑营养与忌口", "列采购清单", "完成烹饪", "处理剩余食材", "计划下一餐"] },
+  meals: { name: "一周饮食", icon: "🍲", keywords: ["做饭", "顿饭", "晚饭", "早餐", "午饭", "吃什么", "食材", "菜", "烹饪", "外卖"], steps: ["确认家人时间", "决定吃什么", "查看现有食材", "考虑营养与忌口", "列采购清单", "完成烹饪", "处理剩余食材", "计划下一餐"] },
   inventory: { name: "日用品库存", icon: "🧻", keywords: ["日用品", "库存", "快用完", "采购", "买菜", "购物", "超市", "纸巾", "洗衣液"], steps: ["留意消耗速度", "检查现有库存", "比较购买渠道", "列出清单", "完成购买", "核对遗漏", "分类归位", "预测下次补充"] },
   cleaning: { name: "清洁整理", icon: "🧹", keywords: ["打扫", "洗碗", "垃圾", "清洁", "保洁", "洗衣", "收拾", "整理", "拖地"], steps: ["发现需要清理", "安排清洁时间", "准备清洁用品", "完成清洁", "分类与归位", "处理垃圾", "检查遗漏", "维持日常秩序"] },
   bills: { name: "家庭账单", icon: "🧾", keywords: ["账单", "水电", "缴费", "报销", "预算", "房租", "物业", "保险", "费用"], steps: ["记住截止日期", "核对金额", "协调家庭预算", "完成缴费", "保存凭证", "检查扣款", "记录支出", "提醒下个周期"] },
@@ -50,13 +50,14 @@ function showSection(id) {
 }
 
 function splitSentences(text) {
-  return text.split(/[。！？!?；;\n]+/).map((item) => item.trim()).filter((item) => item.length > 2);
+  return text.split(/[。！？!?；;，,、\n]+/).map((item) => item.trim()).filter((item) => item.length > 1);
 }
 function analyzeText(text, memberId) {
   const sentences = splitSentences(text).map((sentence) => {
-    let categories = Object.entries(CATEGORIES).filter(([key, value]) => key !== "other" && value.keywords.some((word) => sentence.includes(word))).map(([key]) => key);
+    const normalized = sentence.replace(/[了着过]/g, "");
+    let categories = Object.entries(CATEGORIES).filter(([key, value]) => key !== "other" && value.keywords.some((word) => normalized.includes(word))).map(([key]) => key);
     if (!categories.length) categories = ["other"];
-    let actions = Object.entries(ACTIONS).filter(([, value]) => value.keywords.some((word) => sentence.includes(word))).map(([key]) => key);
+    let actions = Object.entries(ACTIONS).filter(([, value]) => value.keywords.some((word) => normalized.includes(word))).map(([key]) => key);
     if (!actions.length) actions = ["execution"];
     return { text: sentence, categories, actions, memberId };
   });
