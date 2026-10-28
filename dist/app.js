@@ -26,16 +26,32 @@ const ACTIONS = {
 
 const DEMO_A = "这周我给孩子查了三家医院，预约了体检，准备证件，还一直记着复诊时间。我每天决定晚饭吃什么，查看冰箱缺什么并列购物清单。周末出游也是我查天气、找地方、订票和准备孩子的东西。我还提醒交水电费，联系了保洁，并记着给双方父母打电话。";
 const DEMO_B = "这周我请假开车带孩子体检，在医院陪诊并去药房取药。我做了三次晚饭，负责每天洗碗和倒垃圾。周末我开车，搬了露营装备。我还修好了卫生间的水龙头，取了两个快递，给车加油并做了清洁。";
+const DEMO_C = "这周我接送孩子上了两次兴趣班，和老师确认了下周的材料。我买了日用品，整理了客厅，还预约师傅检查漏水。";
+const DEMO_TEXTS = [DEMO_A, DEMO_B, DEMO_C];
+const MEMBER_COLORS = ["a", "b", "c", "d", "e", "f"];
 
-let state = loadState() || { family: null, currentMemberId: null, assignments: {}, demo: false };
+let state = normalizeState(loadState()) || { family: null, currentMemberId: null, assignments: {}, demo: false };
 let currentAnalysis = null;
 let activeCategory = null;
+let pendingRemovalId = null;
 
 function loadState() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
 }
+function normalizeState(saved) {
+  if (!saved?.family?.members?.length) return saved;
+  saved.assignments ||= {};
+  saved.family.ownerId ||= saved.family.members[0].id;
+  saved.family.members.forEach((member, index) => {
+    member.role = member.id === saved.family.ownerId ? "owner" : "member";
+    member.color ||= MEMBER_COLORS[index % MEMBER_COLORS.length];
+    member.initial ||= initials(member.name);
+  });
+  return saved;
+}
 function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 function initials(name) { return (name || "家").slice(-1); }
+function escapeHtml(value = "") { return value.replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char])); }
 function makeCode(name) {
   const letters = (name.match(/[A-Za-z]/g) || ["H", "M"]).join("").slice(0, 2).toUpperCase().padEnd(2, "H");
   return `${letters}${Math.floor(1000 + Math.random() * 9000)}`;
@@ -115,7 +131,7 @@ function leaveFamily() {
 function createFamily() {
   const familyName = $("#familyName").value.trim() || "我们的家";
   const ownerName = $("#ownerName").value.trim() || "我";
-  state = { family: { name: familyName, code: makeCode("HM"), members: [{ id: "a", name: ownerName, initial: initials(ownerName), status: "draft", text: "", color: "a" }] }, currentMemberId: "a", assignments: {}, demo: false };
+  state = { family: { name: familyName, code: makeCode("HM"), ownerId: "a", members: [{ id: "a", name: ownerName, initial: initials(ownerName), role: "owner", status: "draft", text: "", color: "a" }] }, currentMemberId: "a", assignments: {}, demo: false };
   saveState(); renderFamily(); showSection("familySpace"); showToast("家庭空间已创建，可以邀请家人加入了。");
 }
 
@@ -123,29 +139,78 @@ function joinFamily() {
   const code = $("#inviteCodeInput").value.trim().replace(/\s/g, "").toUpperCase();
   const name = $("#joinName").value.trim();
   if (code.length < 6 || !name) { showToast("请填写完整邀请码和你的称呼。"); return; }
-  state = { family: { name: code === "SG4826" ? "松果之家" : "我们的家", code, members: [{ id: "a", name: "林予", initial: "予", status: "submitted", text: DEMO_A, color: "a" }, { id: "b", name, initial: initials(name), status: "draft", text: "", color: "b" }] }, currentMemberId: "b", assignments: {}, demo: true };
+  state = { family: { name: code === "SG4826" ? "松果之家" : "我们的家", code, ownerId: "a", members: [{ id: "a", name: "林予", initial: "予", role: "owner", status: "submitted", text: DEMO_A, color: "a" }, { id: "b", name, initial: initials(name), role: "member", status: "draft", text: "", color: "b" }] }, currentMemberId: "b", assignments: {}, demo: true };
   saveState(); renderFamily(); showSection("familySpace"); showToast(`你已加入“${state.family.name}”。`);
 }
 
 function loadDemoFamily() {
-  state = { family: { name: "松果之家", code: "SG4826", members: [{ id: "a", name: "林予", initial: "予", status: "draft", text: DEMO_A, color: "a" }, { id: "b", name: "周然", initial: "然", status: "submitted", text: DEMO_B, color: "b" }] }, currentMemberId: "a", assignments: {}, demo: true };
+  state = { family: { name: "松果之家", code: "SG4826", ownerId: "a", members: [{ id: "a", name: "林予", initial: "予", role: "owner", status: "draft", text: DEMO_A, color: "a" }, { id: "b", name: "周然", initial: "然", role: "member", status: "submitted", text: DEMO_B, color: "b" }] }, currentMemberId: "a", assignments: {}, demo: true };
   saveState(); renderFamily(); showSection("familySpace"); showToast("演示家庭已载入。周然已在自己的设备上提交。");
 }
 
 function currentMember() { return state.family?.members.find((member) => member.id === state.currentMemberId); }
+function isCurrentAdmin() { return state.family?.ownerId === state.currentMemberId; }
 function renderFamily() {
   if (!state.family) return;
   $("#familyDisplayName").textContent = state.family.name; $("#inviteCode").textContent = state.family.code;
   const members = state.family.members; const submitted = members.filter((member) => member.status === "submitted").length;
-  $("#memberCount").textContent = `${members.length} / 4`; $("#submittedCount").textContent = submitted;
+  $("#memberCount").textContent = `${members.length} / 6`; $("#submittedCount").textContent = submitted;
   $("#progressRing").querySelector("span").textContent = `/ ${Math.max(2, members.length)}`;
-  const rows = members.map((member) => `<div class="member-row"><div class="member-avatar avatar-${member.color}">${member.initial}</div><div><strong>${member.name}${member.id === state.currentMemberId ? "（我）" : ""}</strong><small>${member.id === state.currentMemberId ? "当前设备" : "通过邀请链接加入"}</small></div><span class="member-status ${member.status === "submitted" ? "done" : "waiting"}">${member.status === "submitted" ? "本周已提交" : "等待记录"}</span></div>`);
+  const admin = isCurrentAdmin();
+  const rows = members.map((member) => {
+    const role = member.id === state.family.ownerId ? `<span class="role-badge">管理员</span>` : "";
+    const switchButton = state.demo && member.id !== state.currentMemberId ? `<button class="member-action" data-switch-member="${member.id}">切换测试视角</button>` : "";
+    const adminButtons = admin && member.id !== state.family.ownerId ? `<button class="member-action" data-transfer-admin="${member.id}">设为管理员</button><button class="member-action danger" data-remove-member="${member.id}">移除</button>` : "";
+    return `<div class="member-row"><div class="member-avatar avatar-${member.color}">${escapeHtml(member.initial)}</div><div class="member-info"><strong>${escapeHtml(member.name)}${member.id === state.currentMemberId ? "（我）" : ""}${role}</strong><small>${member.id === state.currentMemberId ? "当前设备" : "通过邀请链接加入"}</small><div class="member-actions">${switchButton}${adminButtons}</div></div><span class="member-status ${member.status === "submitted" ? "done" : "waiting"}">${member.status === "submitted" ? "本周已提交" : "等待记录"}</span></div>`;
+  });
   if (members.length < 2) rows.push(`<div class="member-row"><div class="member-avatar" style="background:#d9ded9;color:#80918b">+</div><div><strong>等待家人加入</strong><small>发送邀请码 ${state.family.code}</small></div><span class="member-status">尚未加入</span></div>`);
   $("#memberList").innerHTML = rows.join("");
+  $("#adminPanel").classList.toggle("hidden", !admin);
+  $$('[data-switch-member]').forEach((button) => button.addEventListener("click", () => switchTestMember(button.dataset.switchMember)));
+  $$('[data-transfer-admin]').forEach((button) => button.addEventListener("click", () => transferAdmin(button.dataset.transferAdmin)));
+  $$('[data-remove-member]').forEach((button) => button.addEventListener("click", () => openRemoveMemberModal(button.dataset.removeMember)));
   const mine = currentMember(); $("#recordMineButton").textContent = mine?.status === "submitted" ? "修改我的记录" : "记录我的一周";
   const ready = members.length >= 2 && members.every((member) => member.status === "submitted");
   $("#viewResultsButton").disabled = !ready; $("#viewResultsButton").textContent = ready ? "查看共同劳动地图" : "等待其他成员";
   $("#progressCopy").textContent = ready ? "所有成员已经完成，本周共同视角现已解锁。" : "你可以先完成自己的记录，系统会在其他成员提交后通知你。";
+}
+
+function addTestMember() {
+  if (!isCurrentAdmin()) { showToast("只有家庭管理员可以添加测试成员。"); return; }
+  if (state.family.members.length >= 6) { showToast("演示家庭最多支持 6 位成员。"); return; }
+  const field = $("#testMemberName"); const fallbackNames = ["陈昕", "赵宁", "韩舟", "许安"];
+  const name = field.value.trim() || fallbackNames[state.family.members.length - 2] || `成员${state.family.members.length + 1}`;
+  const id = `m${Date.now().toString(36)}`; const index = state.family.members.length;
+  state.family.members.push({ id, name, initial: initials(name), role: "member", status: "draft", text: "", color: MEMBER_COLORS[index % MEMBER_COLORS.length] });
+  state.currentMemberId = id; state.demo = true; field.value = ""; saveState(); renderFamily(); openRecord();
+  showToast(`已添加“${name}”，现在模拟在其设备上填写。`);
+}
+
+function switchTestMember(memberId) {
+  const member = state.family.members.find((item) => item.id === memberId); if (!member || !state.demo) return;
+  state.currentMemberId = memberId; saveState(); renderFamily(); showToast(`已切换到“${member.name}”的测试视角。`);
+}
+
+function transferAdmin(memberId) {
+  if (!isCurrentAdmin()) return;
+  const member = state.family.members.find((item) => item.id === memberId); if (!member) return;
+  state.family.ownerId = memberId; state.family.members.forEach((item) => { item.role = item.id === memberId ? "owner" : "member"; });
+  saveState(); renderFamily(); showToast(`已将家庭管理员转让给“${member.name}”。`);
+}
+
+function openRemoveMemberModal(memberId) {
+  if (!isCurrentAdmin() || memberId === state.family.ownerId) return;
+  const member = state.family.members.find((item) => item.id === memberId); if (!member) return;
+  pendingRemovalId = memberId; $("#removeMemberName").textContent = member.name; $("#removeMemberModal").classList.remove("hidden"); $("#cancelRemoveMemberButton").focus();
+}
+
+function closeRemoveMemberModal() { pendingRemovalId = null; $("#removeMemberModal").classList.add("hidden"); }
+function confirmRemoveMember() {
+  if (!isCurrentAdmin() || !pendingRemovalId) return;
+  const member = state.family.members.find((item) => item.id === pendingRemovalId); if (!member) { closeRemoveMemberModal(); return; }
+  state.family.members = state.family.members.filter((item) => item.id !== pendingRemovalId);
+  Object.keys(state.assignments).forEach((key) => { if (state.assignments[key] === pendingRemovalId) delete state.assignments[key]; });
+  closeRemoveMemberModal(); saveState(); renderFamily(); showToast(`已将“${member.name}”移出家庭。`);
 }
 
 function openRecord() {
@@ -164,8 +229,10 @@ function submitRecord() {
 }
 
 function simulateFamilySubmission() {
-  if (state.family.members.length < 2) state.family.members.push({ id: "b", name: "周然", initial: "然", status: "submitted", text: DEMO_B, color: "b" });
-  else { const other = state.family.members.find((member) => member.id !== state.currentMemberId); other.status = "submitted"; other.text ||= DEMO_B; }
+  if (state.family.members.length < 2) state.family.members.push({ id: "b", name: "周然", initial: "然", role: "member", status: "submitted", text: DEMO_B, color: "b" });
+  state.family.members.forEach((member, index) => {
+    if (member.id !== state.currentMemberId && member.status !== "submitted") { member.status = "submitted"; member.text ||= DEMO_TEXTS[index % DEMO_TEXTS.length]; }
+  });
   saveState(); renderFamily(); renderResults(); showSection("results"); showToast("家人的演示记录已同步，共同视角已生成。");
 }
 
@@ -178,34 +245,37 @@ async function copyInvite(kind = "link") {
 }
 
 function buildCombinedAnalysis() {
-  const members = state.family.members.filter((member) => member.status === "submitted").slice(0, 2);
+  const members = state.family.members.filter((member) => member.status === "submitted");
   const analyses = members.map((member) => ({ member, data: analyzeText(member.text, member.id) }));
   const categoryKeys = [...new Set(analyses.flatMap((item) => Object.keys(item.data.categories)))].sort((a, b) => analyses.reduce((sum, item) => sum + (item.data.categories[b]?.score || 0) - (item.data.categories[a]?.score || 0), 0));
-  const shared = categoryKeys.filter((key) => analyses.every((item) => item.data.categories[key]));
+  const shared = categoryKeys.filter((key) => analyses.filter((item) => item.data.categories[key]).length >= 2);
   const packages = categoryKeys.map((key) => {
-    const scores = analyses.map((item) => item.data.categories[key]?.score || 0); const ownerIndex = scores[1] > scores[0] ? 1 : 0;
-    return { id: key, name: CATEGORIES[key].name, icon: CATEGORIES[key].icon, detail: CATEGORIES[key].steps.slice(0, 4).join(" · "), weight: Math.max(8, scores[0] + scores[1]), owner: state.assignments[key] || members[ownerIndex].id };
+    const scores = analyses.map((item) => item.data.categories[key]?.score || 0); const ownerIndex = scores.indexOf(Math.max(...scores));
+    return { id: key, name: CATEGORIES[key].name, icon: CATEGORIES[key].icon, detail: CATEGORIES[key].steps.slice(0, 4).join(" · "), weight: Math.max(8, scores.reduce((sum, value) => sum + value, 0)), owner: state.assignments[key] || members[ownerIndex].id };
   });
   return { members, analyses, categoryKeys, shared, packages };
 }
 
-function percentage(a, b) { const total = a + b; return total ? Math.round(a / total * 100) : 50; }
 function renderResults() {
   currentAnalysis = buildCombinedAnalysis();
   if (currentAnalysis.members.length < 2) return;
-  const [left, right] = currentAnalysis.analyses; const [memberA, memberB] = currentAnalysis.members;
   $("#analysisFamilyName").textContent = `${state.family.name} · 本周共同视角`;
   $("#sharedMetric").innerHTML = `${currentAnalysis.shared.length}<small>类</small>`;
-  $("#taskMetric").innerHTML = `${left.data.sentences.length + right.data.sentences.length}<small>项</small>`;
+  $("#taskMetric").innerHTML = `${currentAnalysis.analyses.reduce((sum, item) => sum + item.data.sentences.length, 0)}<small>项</small>`;
   $("#packageMetric").innerHTML = `${currentAnalysis.packages.length}<small>组</small>`;
-  const mentalA = percentage(left.data.mental, right.data.mental); const visibleA = percentage(left.data.execution, right.data.execution);
-  const heavier = mentalA >= 50 ? memberA.name : memberB.name; const mentalShare = mentalA >= 50 ? mentalA : 100 - mentalA; const visibleShare = mentalA >= 50 ? visibleA : 100 - visibleA;
-  $("#headlineInsight").innerHTML = `${heavier}承担了 <b>${visibleShare}%</b> 的可见执行，同时承担了 <b>${mentalShare}%</b> 的计划、提醒与协调。`;
+  const totalMental = currentAnalysis.analyses.reduce((sum, item) => sum + item.data.mental, 0) || 1;
+  const totalVisible = currentAnalysis.analyses.reduce((sum, item) => sum + item.data.execution, 0) || 1;
+  const heavier = [...currentAnalysis.analyses].sort((a, b) => b.data.mental - a.data.mental)[0];
+  const mentalShare = Math.round(heavier.data.mental / totalMental * 100); const visibleShare = Math.round(heavier.data.execution / totalVisible * 100);
+  $("#headlineInsight").innerHTML = `${escapeHtml(heavier.member.name)}承担了 <b>${visibleShare}%</b> 的可见执行，同时承担了 <b>${mentalShare}%</b> 的计划、提醒与协调。`;
   const unique = currentAnalysis.categoryKeys.filter((key) => !currentAnalysis.shared.includes(key));
-  $("#headlineDetail").textContent = unique.length ? `双方尚未共同看见的领域包括：${unique.slice(0, 3).map((key) => CATEGORIES[key].name).join("、")}。` : "双方记录高度重合，可以直接进入责任调整。";
-  $("#columnNameA").textContent = memberA.name; $("#columnNameB").textContent = memberB.name;
+  $("#headlineDetail").textContent = unique.length ? `还没有形成共同视角的领域包括：${unique.slice(0, 3).map((key) => CATEGORIES[key].name).join("、")}。` : "成员记录高度重合，可以直接进入责任调整。";
   activeCategory = currentAnalysis.shared[0] || currentAnalysis.categoryKeys[0] || "other";
-  renderCategoryTabs(); renderIceberg(activeCategory); renderComparison(activeCategory); renderPackages();
+  renderRawRecords(); renderCategoryTabs(); renderIceberg(activeCategory); renderComparison(activeCategory); renderPackages();
+}
+
+function renderRawRecords() {
+  $("#rawRecordGrid").innerHTML = currentAnalysis.members.map((member) => `<article class="raw-record-card"><div class="raw-record-head"><span class="member-avatar avatar-${member.color}">${escapeHtml(member.initial)}</span><div><strong>${escapeHtml(member.name)}</strong><small>${member.id === state.family.ownerId ? "家庭管理员" : "家庭成员"}</small></div></div><p>${escapeHtml(member.text)}</p></article>`).join("");
 }
 
 function renderCategoryTabs() {
@@ -214,44 +284,57 @@ function renderCategoryTabs() {
 }
 function shorten(text, max = 23) { return text.length > max ? `${text.slice(0, max)}…` : text; }
 function renderIceberg(key) {
-  const visible = currentAnalysis.analyses.flatMap((item) => (item.data.categories[key]?.sentences || []).slice(0, 2).map((text) => ({ text, initial: item.member.initial })));
-  $("#visibleTaskList").innerHTML = visible.length ? visible.map((item) => `<span class="ice-item">${item.initial} · ${shorten(item.text, 18)}</span>`).join("") : `<span class="ice-item">没有识别到可见执行</span>`;
+  const visible = currentAnalysis.analyses.flatMap((item) => (item.data.categories[key]?.sentences || []).slice(0, 2).map((text) => ({ text, name: item.member.name })));
+  $("#visibleTaskList").innerHTML = visible.length ? visible.map((item) => `<span class="ice-item"><b>${escapeHtml(item.name)}</b> · ${escapeHtml(shorten(item.text, 18))}</span>`).join("") : `<span class="ice-item">没有识别到可见执行</span>`;
   const actionsSeen = new Set(currentAnalysis.analyses.flatMap((item) => Object.keys(item.data.categories[key]?.actions || {})));
   const steps = CATEGORIES[key].steps.filter((step, index) => actionsSeen.size > 2 || index < 6).slice(0, 7);
   $("#hiddenTaskList").innerHTML = steps.map((step) => `<span class="ice-item">${step}</span>`).join("");
 }
 
 function renderComparison(key) {
-  const [left, right] = currentAnalysis.analyses; const infoA = left.data.categories[key]; const infoB = right.data.categories[key];
+  const mentions = currentAnalysis.analyses.filter((item) => item.data.categories[key]);
   $("#compareCategory").textContent = CATEGORIES[key].name;
-  $("#compareBadge").textContent = infoA && infoB ? "双方都提到，但关注环节不同" : "只出现在一位成员的记录中";
-  $("#voiceA").textContent = infoA ? `“${infoA.sentences[0]}。”` : `“我的记录中没有提到这件事。”`;
-  $("#voiceB").textContent = infoB ? `“${infoB.sentences[0]}。”` : `“我的记录中没有提到这件事。”`;
+  $("#compareBadge").textContent = mentions.length >= 2 ? `${mentions.length} 位成员提到，关注环节各有不同` : "只出现在一位成员的记录中";
+  $("#voiceList").innerHTML = currentAnalysis.analyses.map((item, index) => {
+    const info = item.data.categories[key];
+    return `<div class="voice-card voice-${index % 2 ? "b" : "a"}"><div class="mini-avatar avatar-${item.member.color}">${escapeHtml(item.member.initial)}</div><div class="voice-copy"><strong>${escapeHtml(item.member.name)}</strong><p>${info ? `“${escapeHtml(info.sentences[0])}。”` : "我的记录中没有提到这件事。"}</p></div></div>`;
+  }).join("");
   const chain = [{ name: "发现需求", action: "reminder" }, { name: "计划准备", action: "planning" }, { name: "现场执行", action: "execution" }, { name: "后续跟进", action: "followup" }];
-  const ownerFor = (action) => { const a = infoA?.actions[action] || 0; const b = infoB?.actions[action] || 0; if (a === b && a > 0) return "共同"; if (!a && !b) return "待确认"; return a > b ? left.member.name : right.member.name; };
+  const ownerFor = (action) => {
+    const counts = currentAnalysis.analyses.map((item) => ({ name: item.member.name, count: item.data.categories[key]?.actions[action] || 0 }));
+    const max = Math.max(...counts.map((item) => item.count)); if (!max) return "待确认";
+    const leaders = counts.filter((item) => item.count === max); return leaders.length > 1 ? "共同" : leaders[0].name;
+  };
   $("#responsibilityChain").innerHTML = chain.map((item, index) => `<div class="chain-item"><span>${index + 1}</span><p>${item.name}</p><small>${ownerFor(item.action)}</small></div>${index < chain.length - 1 ? '<i class="chain-line"></i>' : ''}`).join("");
 }
 
 function renderPackages() {
-  const [memberA, memberB] = currentAnalysis.members; const packages = currentAnalysis.packages.map((pkg) => ({ ...pkg, owner: state.assignments[pkg.id] || pkg.owner }));
-  const render = (items, arrow) => items.map((item) => `<button class="package-card" data-package="${item.id}"><span class="package-icon">${item.icon}</span><div><strong>${item.name}</strong><small>${item.detail}</small></div><span class="arrow">${arrow}</span></button>`).join("") || `<div class="member-status">暂无责任包</div>`;
-  $("#packagesA").innerHTML = render(packages.filter((item) => item.owner === memberA.id), "→"); $("#packagesB").innerHTML = render(packages.filter((item) => item.owner === memberB.id), "←");
+  const members = currentAnalysis.members; const packages = currentAnalysis.packages.map((pkg) => ({ ...pkg, owner: state.assignments[pkg.id] || pkg.owner }));
+  const total = packages.reduce((sum, item) => sum + item.weight, 0) || 1;
+  const loads = Object.fromEntries(members.map((member) => [member.id, packages.filter((item) => item.owner === member.id).reduce((sum, item) => sum + item.weight, 0)]));
+  $("#balanceColumns").innerHTML = members.map((member) => {
+    const memberPackages = packages.filter((item) => item.owner === member.id);
+    const cards = memberPackages.map((item) => `<button class="package-card" data-package="${item.id}"><span class="package-icon">${item.icon}</span><div><strong>${item.name}</strong><small>${item.detail}</small></div><span class="arrow">→</span></button>`).join("") || `<div class="member-status">暂无责任包</div>`;
+    return `<div class="load-column"><div class="column-head"><div class="member-avatar avatar-${member.color}">${escapeHtml(member.initial)}</div><div><span>${escapeHtml(member.name)}</span><strong>${Math.round(loads[member.id] / total * 100)}%</strong></div></div><div class="package-list">${cards}</div></div>`;
+  }).join("");
   $$('[data-package]').forEach((button) => button.addEventListener("click", () => movePackage(button.dataset.package)));
-  const loadAValue = packages.filter((item) => item.owner === memberA.id).reduce((sum, item) => sum + item.weight, 0); const total = packages.reduce((sum, item) => sum + item.weight, 0) || 1;
-  const loadA = Math.round(loadAValue / total * 100); const loadB = 100 - loadA; const score = Math.max(0, 100 - Math.abs(loadA - loadB));
-  $("#loadA").textContent = `${loadA}%`; $("#loadB").textContent = `${loadB}%`; $("#balanceScore").textContent = score; $("#ringScore").textContent = score;
-  if (Math.abs(loadA - loadB) <= 14) $("#actionSummary").innerHTML = `<strong>当前完整责任分布已经比较均衡。</strong>建议试运行一周，再共同复盘实际感受。`;
-  else { const heavier = loadA > loadB ? memberA.name : memberB.name; const candidate = packages.filter((item) => item.owner === (loadA > loadB ? memberA.id : memberB.id)).sort((a, b) => a.weight - b.weight)[0]; $("#actionSummary").innerHTML = `<strong>${heavier}仍承担较多完整责任。</strong>${candidate ? `可以先尝试完整转交“${candidate.name}”。` : "可以先选择一个边界清晰的责任包。"}`; }
+  const ideal = 100 / members.length; const shares = members.map((member) => ({ member, value: loads[member.id] / total * 100 })).sort((a, b) => b.value - a.value);
+  const averageGap = shares.reduce((sum, item) => sum + Math.abs(item.value - ideal), 0) / members.length;
+  const score = Math.max(0, Math.round(100 - averageGap * 2)); $("#balanceScore").textContent = score;
+  if (averageGap <= 8) $("#actionSummary").innerHTML = `<strong>当前完整责任分布已经比较均衡。</strong>建议试运行一周，再共同复盘实际感受。`;
+  else { const heavier = shares[0].member; const candidate = packages.filter((item) => item.owner === heavier.id).sort((a, b) => a.weight - b.weight)[0]; $("#actionSummary").innerHTML = `<strong>${escapeHtml(heavier.name)}仍承担较多完整责任。</strong>${candidate ? `可以先尝试完整转交“${candidate.name}”。` : "可以先选择一个边界清晰的责任包。"}`; }
 }
 function movePackage(id) {
-  const [memberA, memberB] = currentAnalysis.members; const pkg = currentAnalysis.packages.find((item) => item.id === id); const owner = state.assignments[id] || pkg.owner;
-  state.assignments[id] = owner === memberA.id ? memberB.id : memberA.id; saveState(); renderPackages(); showToast(`“${pkg.name}”完整责任已转交。`);
+  const members = currentAnalysis.members; const pkg = currentAnalysis.packages.find((item) => item.id === id); const owner = state.assignments[id] || pkg.owner;
+  const next = members[(members.findIndex((member) => member.id === owner) + 1) % members.length]; state.assignments[id] = next.id;
+  saveState(); renderPackages(); showToast(`“${pkg.name}”完整责任已转交给“${next.name}”。`);
 }
 
 function exportPlan() {
-  if (!currentAnalysis) return; const [memberA, memberB] = currentAnalysis.members; const groups = { [memberA.id]: [], [memberB.id]: [] };
+  if (!currentAnalysis) return; const groups = Object.fromEntries(currentAnalysis.members.map((member) => [member.id, []]));
   currentAnalysis.packages.forEach((pkg) => { const owner = state.assignments[pkg.id] || pkg.owner; groups[owner].push(`- ${pkg.name}：${pkg.detail.replaceAll(" · ", "、")}`); });
-  const content = `《${state.family.name}下周家庭分工约定》\n\n我们约定转交的是完整责任，而不只是最后一步。\n\n${memberA.name}负责：\n${groups[memberA.id].join("\n") || "- 待共同确认"}\n\n${memberB.name}负责：\n${groups[memberB.id].join("\n") || "- 待共同确认"}\n\n这份约定用于帮助我们看见劳动并减少遗漏，不用于评价任何人的价值。`;
+  const sections = currentAnalysis.members.map((member) => `${member.name}负责：\n${groups[member.id].join("\n") || "- 待共同确认"}`).join("\n\n");
+  const content = `《${state.family.name}下周家庭分工约定》\n\n我们约定转交的是完整责任，而不只是最后一步。\n\n${sections}\n\n这份约定用于帮助我们看见劳动并减少遗漏，不用于评价任何人的价值。`;
   const blob = new Blob([content], { type: "text/plain;charset=utf-8" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${state.family.name}-下周分工约定.txt`; link.click(); URL.revokeObjectURL(url); showToast("分工约定已导出。");
 }
 
@@ -264,7 +347,16 @@ $("#leaveFamilyButton").addEventListener("click", openLeaveModal);
 $("#cancelLeaveButton").addEventListener("click", closeLeaveModal);
 $("#confirmLeaveButton").addEventListener("click", leaveFamily);
 $("#leaveModal").addEventListener("click", (event) => { if (event.target === $("#leaveModal")) closeLeaveModal(); });
-document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !$("#leaveModal").classList.contains("hidden")) closeLeaveModal(); });
+$("#addTestMemberButton").addEventListener("click", addTestMember);
+$("#testMemberName").addEventListener("keydown", (event) => { if (event.key === "Enter") addTestMember(); });
+$("#cancelRemoveMemberButton").addEventListener("click", closeRemoveMemberModal);
+$("#confirmRemoveMemberButton").addEventListener("click", confirmRemoveMember);
+$("#removeMemberModal").addEventListener("click", (event) => { if (event.target === $("#removeMemberModal")) closeRemoveMemberModal(); });
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (!$("#leaveModal").classList.contains("hidden")) closeLeaveModal();
+  if (!$("#removeMemberModal").classList.contains("hidden")) closeRemoveMemberModal();
+});
 $("#recordMineButton").addEventListener("click", openRecord); $("#backToFamily").addEventListener("click", () => { renderFamily(); showSection("familySpace"); });
 $("#memberInput").addEventListener("input", (event) => $("#analysisPreview").querySelector("strong").textContent = recognizedSummary(event.target.value));
 $$('[data-prompt]').forEach((button) => button.addEventListener("click", () => { const field = $("#memberInput"); field.value += `${field.value ? "\n" : ""}${button.dataset.prompt}`; field.focus(); field.dispatchEvent(new Event("input")); }));

@@ -81,9 +81,13 @@
           </div>
           <div class="family-grid">
             <article class="family-main-card">
-              <div class="card-heading"><div><p class="eyebrow">家庭成员</p><h3>大家在自己的设备上分别完成。</h3></div><span id="memberCount">2 / 4</span></div>
+              <div class="card-heading"><div><p class="eyebrow">家庭成员</p><h3>大家在自己的设备上分别完成。</h3></div><span id="memberCount">2 / 6</span></div>
               <div class="member-list" id="memberList"></div>
-              <div class="family-tip"><span>🔒</span><p>成员提交前，其他人看不到其原始记录。合并分析只展示劳动类型和责任结构。</p></div>
+              <div class="admin-panel hidden" id="adminPanel">
+                <div><strong>家庭管理员工具</strong><small>用于 Demo 测试：添加成员后会直接切换到该成员视角填写。</small></div>
+                <div class="admin-add"><input id="testMemberName" type="text" maxlength="10" placeholder="第三位成员称呼，例如 陈昕" /><button class="button button-primary" id="addTestMemberButton">添加并切换填写</button></div>
+              </div>
+              <div class="family-tip"><span>🔒</span><p>成员提交前，其他人看不到其原始记录；所有人提交后，家庭成员可以共同查看原始描述和合并分析。</p></div>
             </article>
             <aside class="family-side-card">
               <p class="eyebrow">本周进度</p>
@@ -102,7 +106,7 @@
               <p class="eyebrow">只记录你自己</p>
               <h2><span id="currentMemberName">林予</span>，这一周你在操心什么？</h2>
               <p>不用整理成清单，也不用替其他人填写。写下你实际完成、提前计划、持续提醒或负责跟进的事情。</p>
-              <div class="analysis-preview" id="analysisPreview"><span>实时识别</span><strong>开始输入后，这里会显示识别到的劳动类型。</strong></div>
+              <div class="analysis-preview" id="analysisPreview"><span>本地语义回退</span><strong>开始输入后，这里会显示识别到的劳动类型。</strong></div>
             </div>
             <div class="record-card">
               <label for="memberInput">我的一周记录</label>
@@ -110,24 +114,28 @@
               <div class="prompt-chips">
                 <button data-prompt="我实际完成了：">我实际完成了</button><button data-prompt="我提前计划了：">我提前计划了</button><button data-prompt="我一直记着并提醒：">我一直记着并提醒</button><button data-prompt="我负责协调和跟进：">我负责协调和跟进</button>
               </div>
-              <div class="record-footer"><p>内容仅保存在当前浏览器的演示家庭中。</p><button class="button button-primary" id="submitRecordButton">提交我的记录</button></div>
+              <div class="record-footer"><p>当前纯前端版使用本地识别，内容仅保存在此浏览器；接入后端后可切换为 AI 语义分析。</p><button class="button button-primary" id="submitRecordButton">提交我的记录</button></div>
             </div>
           </div>
         </section>
 
         <section class="waiting-space hidden" id="waitingSpace">
-          <div class="waiting-card"><div class="waiting-illustration"><span>予</span><i></i><span>然</span></div><p class="eyebrow">你的记录已提交</p><h2>等家人完成后，再一起看结果。</h2><p>你无需把手机交给下一位成员。把邀请链接发给家人，他们会在自己的设备上加入并填写。</p><div class="waiting-actions"><button class="button button-primary" id="waitingCopyLink">复制邀请链接</button><button class="button button-quiet" id="simulateFamilyButton">演示家人完成提交</button></div></div>
+          <div class="waiting-card"><div class="waiting-illustration"><span>家</span><i></i><span>人</span></div><p class="eyebrow">你的记录已提交</p><h2>等家人完成后，再一起看结果。</h2><p>你无需把手机交给下一位成员。把邀请链接发给家人，他们会在自己的设备上加入并填写。</p><div class="waiting-actions"><button class="button button-primary" id="waitingCopyLink">复制邀请链接</button><button class="button button-quiet" id="simulateFamilyButton">演示其余成员完成提交</button></div></div>
         </section>
 
         <section class="results hidden" id="results">
           <div class="result-topbar"><button class="back-button" id="resultsBack">← 返回家庭空间</button><span id="analysisFamilyName">松果之家 · 本周共同视角</span></div>
-          <div class="result-intro"><p class="eyebrow">合并视角</p><h2>你们做的比彼此看到的更多。</h2><p>分析根据双方本周记录实时生成。修改任何一位成员的输入，下面的任务、占比和责任包都会随之变化。</p></div>
+          <div class="result-intro"><p class="eyebrow">合并视角</p><h2>你们做的比彼此看到的更多。</h2><p>分析根据全体成员本周记录实时生成。修改任何一位成员的输入，下面的任务、占比和责任包都会随之变化。</p></div>
           <div class="insight-grid">
-            <article class="metric-card coral"><span>共同关注</span><strong id="sharedMetric">0<small>类</small></strong><p>双方都提到的家庭领域。</p></article>
-            <article class="metric-card blue"><span>被识别的劳动</span><strong id="taskMetric">0<small>项</small></strong><p>从两份记录中提取的具体事项。</p></article>
+            <article class="metric-card coral"><span>共同关注</span><strong id="sharedMetric">0<small>类</small></strong><p>至少两位成员提到的家庭领域。</p></article>
+            <article class="metric-card blue"><span>被识别的劳动</span><strong id="taskMetric">0<small>项</small></strong><p>从全体成员记录中提取的具体事项。</p></article>
             <article class="metric-card green"><span>完整责任包</span><strong id="packageMetric">0<small>组</small></strong><p>包含计划、执行和跟进的连续责任。</p></article>
             <article class="headline-card"><div class="quote-mark">“</div><p id="headlineInsight">正在生成共同视角。</p><small id="headlineDetail">系统分析的是任务结构，而不是评价个人。</small></article>
           </div>
+          <section class="raw-records panel">
+            <div class="panel-heading"><div><span class="panel-number">00</span><h3>大家一开始怎么写的</h3></div><p>全员提交后展示完整原文，方便核对分析有没有曲解任何人的表达。</p></div>
+            <div class="raw-record-grid" id="rawRecordGrid"></div>
+          </section>
           <div class="analysis-grid">
             <article class="panel iceberg-panel">
               <div class="panel-heading"><div><span class="panel-number">01</span><h3>劳动冰山</h3></div><p>选择一个家庭领域，看看输入中可见的执行和背后的心智劳动。</p></div>
@@ -135,21 +143,22 @@
               <div class="category-tabs" id="categoryTabs"></div>
             </article>
             <article class="panel compare-panel">
-              <div class="panel-heading"><div><span class="panel-number">02</span><h3>同一领域，两种视角</h3></div><p>系统从双方原始记录中选择真实句子进行对照。</p></div>
+              <div class="panel-heading"><div><span class="panel-number">02</span><h3>同一领域，多种视角</h3></div><p>系统从每位成员的原始记录中选择真实句子进行对照。</p></div>
               <div class="comparison-title"><span id="compareCategory">共同事项</span><small id="compareBadge">等待分析</small></div>
-              <div class="voice-card voice-a"><div class="mini-avatar avatar-a">予</div><p id="voiceA">尚未识别到成员 A 的相关描述。</p></div><div class="merge-line"><span>合并后</span></div><div class="voice-card voice-b"><div class="mini-avatar avatar-b">然</div><p id="voiceB">尚未识别到成员 B 的相关描述。</p></div>
+              <div class="voice-list" id="voiceList"></div>
               <div class="responsibility-chain" id="responsibilityChain"></div>
             </article>
           </div>
           <section class="rebalance-section">
             <div class="section-heading compact"><div><p class="eyebrow">共同调整</p><h2>不只分一件事，要转交完整责任。</h2></div><div class="score-box"><span>当前平衡度</span><strong id="balanceScore">—</strong><small>/ 100</small></div></div>
-            <div class="balance-layout"><div class="load-column"><div class="column-head"><div class="member-avatar avatar-a">予</div><div><span id="columnNameA">林予</span><strong id="loadA">0%</strong></div></div><div class="package-list" id="packagesA"></div></div><div class="balance-center"><div class="balance-ring"><span id="ringScore">—</span><small>平衡度</small></div><p>点击责任包，在两人之间完整转交。</p></div><div class="load-column"><div class="column-head"><div class="member-avatar avatar-b">然</div><div><span id="columnNameB">周然</span><strong id="loadB">0%</strong></div></div><div class="package-list" id="packagesB"></div></div></div>
+            <p class="rebalance-help">点击任意责任包，会把完整责任依次转交给下一位家庭成员。</p>
+            <div class="balance-layout balance-multi" id="balanceColumns"></div>
             <div class="action-bar"><div><span class="spark">✦</span><p id="actionSummary">系统会根据当前责任分布提供下一步建议。</p></div><button class="button button-primary" id="exportButton">导出下周分工约定</button></div>
           </section>
         </section>
       </main>
 
-      <footer><div class="brand footer-brand"><span class="brand-mark"><i></i><i></i><i></i></span><span>谁在操心</span></div><p>让劳动被看见，让责任能被共同承担。</p><span>概念 Demo · 本地规则分析</span></footer>
+      <footer><div class="brand footer-brand"><span class="brand-mark"><i></i><i></i><i></i></span><span>谁在操心</span></div><p>让劳动被看见，让责任能被共同承担。</p><span>概念 Demo · 可接 AI 的本地语义回退</span></footer>
     </div>
     <div class="modal-backdrop hidden" id="leaveModal" role="dialog" aria-modal="true" aria-labelledby="leaveModalTitle">
       <div class="modal-card">
@@ -160,7 +169,16 @@
         <div class="modal-actions"><button class="button button-quiet" id="cancelLeaveButton">取消</button><button class="button button-danger" id="confirmLeaveButton">确认离开并清除记录</button></div>
       </div>
     </div>
+    <div class="modal-backdrop hidden" id="removeMemberModal" role="dialog" aria-modal="true" aria-labelledby="removeMemberTitle">
+      <div class="modal-card">
+        <span class="modal-icon">−</span>
+        <p class="eyebrow">管理员操作</p>
+        <h2 id="removeMemberTitle">移除家庭成员</h2>
+        <p>确定将“<span id="removeMemberName">该成员</span>”移出家庭吗？演示版会同时删除此浏览器中该成员的记录。</p>
+        <div class="modal-actions"><button class="button button-quiet" id="cancelRemoveMemberButton">取消</button><button class="button button-danger" id="confirmRemoveMemberButton">确认移除</button></div>
+      </div>
+    </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="app.js?v=20261029-1"></script>
+    <script src="app.js?v=20261029-2"></script>
   </body>
 </html>
