@@ -150,10 +150,14 @@
             </article>
           </div>
           <section class="rebalance-section">
-            <div class="section-heading compact"><div><p class="eyebrow">共同调整</p><h2>不只分一件事，要转交完整责任。</h2></div><div class="score-box"><span>当前平衡度</span><strong id="balanceScore">—</strong><small>/ 100</small></div></div>
-            <p class="rebalance-help">点击任意责任包，会把完整责任依次转交给下一位家庭成员。</p>
+            <div class="section-heading compact"><div><p class="eyebrow">持续责任协商</p><h2>根据本周暴露的问题，商量以后谁来主责。</h2></div><div class="score-box"><span>已有主责成员</span><strong id="responsibilityCoverage">—</strong><small id="responsibilityTotal">/ —</small></div></div>
+            <div class="responsibility-guide">
+              <article><span>这不是下周任务清单</span><strong>只讨论未来还会反复出现的责任。</strong><p>本周记录只是发现问题的依据。一次性、已经结束或下周不会发生的事项，可以拖到“暂不协商”。</p></article>
+              <article><span>你们要做什么</span><strong>确认谁负责从发现到跟进的完整过程。</strong><p>桌面端把卡片拖到成员列；手机端在卡片里直接选择主责人。调整结果只是讨论草案，需要全家确认。</p></article>
+            </div>
+            <p class="rebalance-help">拖动的是“持续责任领域”，不是把本周发生的每一件事原样复制到下周。</p>
             <div class="balance-layout balance-multi" id="balanceColumns"></div>
-            <div class="action-bar"><div><span class="spark">✦</span><p id="actionSummary">系统会根据当前责任分布提供下一步建议。</p></div><button class="button button-primary" id="exportButton">导出下周分工约定</button></div>
+            <div class="action-bar"><div><span class="spark">✦</span><p id="actionSummary">先把仍会持续的责任拖到主责人名下，再一起确认边界。</p></div><button class="button button-primary" id="exportButton">导出责任协商记录</button></div>
           </section>
         </section>
       </main>
@@ -179,6 +183,6 @@
       </div>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="app.js?v=20261029-2"></script>
+    <script src="app.js?v=20261029-3"></script>
   </body>
 </html>

@@ -17,7 +17,7 @@
 - **动态劳动冰山。** 用户输入会真实改变水面上的可见执行，以及水面下的计划、提醒和持续责任。
 - **多人原文与视角对照。** 所有成员提交后，系统展示每个人的完整原始描述，并在同一家庭领域中引用对应语句进行对照。
 - **管理员与多人测试。** 家庭管理员可以添加测试成员、转让管理员和移除普通成员；演示模式可以切换成员视角，方便在一个浏览器中测试三至六人家庭。
-- **完整责任包。** 用户可以把包含发现、计划、执行和跟进的整组责任在多位成员之间转交，并实时查看平衡度变化。
+- **持续责任协商。** 系统用本周记录发现可能长期反复出现的责任领域，但不把本周任务机械复制到下周。用户可以拖拽责任包确认主责人，或把一次性事项放入“暂不协商”。
 - **分工约定导出。** 调整完成后可以导出下一周的家庭分工文本。
 
 ### 快速开始
@@ -77,7 +77,7 @@ python3 -m http.server 4173 --directory dist
 - **Dynamic labor iceberg.** User input directly changes the visible tasks above water and the mental load shown below the surface.
 - **Multi-member source review.** Once everyone submits, the product shows every member's complete original description and quotes the relevant wording for each household domain.
 - **Administrator and multi-member testing.** The household administrator can add test members, transfer the administrator role, and remove ordinary members. Demo-mode perspective switching supports testing households of three to six people in one browser.
-- **Complete responsibility bundles.** Reassign an entire chain of discovery, planning, execution, and follow-up across multiple members while watching the balance score update.
+- **Ongoing responsibility negotiation.** This week's entries reveal potentially recurring responsibility areas without copying the same tasks into next week. Drag responsibility bundles between members or defer one-off items from the discussion.
 - **Exportable weekly agreement.** Download a plain-text household responsibility plan after reaching an agreement.
 
 ### Run locally

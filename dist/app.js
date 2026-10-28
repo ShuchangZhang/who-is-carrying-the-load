@@ -12,6 +12,7 @@ const CATEGORIES = {
   transport: { name: "出行与车辆", icon: "🚗", keywords: ["开车", "接送", "加油", "车辆", "洗车", "通勤", "停车", "保养", "车"], steps: ["确认出发时间", "规划路线", "协调接送", "检查车辆状态", "准备随身物品", "现场执行", "处理停车与加油", "安排维护"] },
   children: { name: "孩子成长", icon: "🎒", keywords: ["孩子", "学校", "老师", "作业", "家长会", "兴趣班", "幼儿园", "辅导", "学习"], steps: ["留意孩子状态", "查看学校通知", "协调家庭时间", "准备材料", "提醒重要节点", "陪伴完成", "与老师沟通", "跟进后续变化"] },
   outings: { name: "家庭活动", icon: "⛺", keywords: ["周末", "出游", "旅行", "门票", "露营", "订票", "酒店", "天气", "行程"], steps: ["提出备选方案", "确认家人偏好", "查看天气", "比较预算", "完成预订", "准备随身物品", "规划路线", "安排返程"] },
+  pets: { name: "宠物照护", icon: "🐕", keywords: ["宠物", "狗", "猫", "猫砂", "狗粮", "猫粮", "兽医", "疫苗", "铲屎"], patterns: [/遛.*狗/, /喂.*(?:狗|猫)/, /(?:狗|猫).*(?:洗澡|看病|吃药)/], steps: ["留意宠物状态", "安排喂食与活动", "检查食物用品", "遛狗或陪伴活动", "清理排泄与环境", "安排洗护或就医", "设置用药提醒", "持续观察变化"] },
   relationships: { name: "亲友联络", icon: "💬", keywords: ["父母", "家人", "老人", "电话", "生日", "礼物", "聚会", "亲戚", "朋友"], steps: ["记住重要日期", "留意亲友情绪", "协调联系时间", "准备礼物", "主动联络", "安排见面", "传达家庭信息", "后续关心"] },
   other: { name: "其他家庭事务", icon: "🏠", keywords: [], steps: ["发现需要处理", "明确任务边界", "收集必要信息", "安排时间", "完成执行", "告知相关成员", "检查结果", "记录下次提醒"] }
 };
@@ -34,6 +35,7 @@ let state = normalizeState(loadState()) || { family: null, currentMemberId: null
 let currentAnalysis = null;
 let activeCategory = null;
 let pendingRemovalId = null;
+let draggedPackageId = null;
 
 function loadState() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
@@ -71,7 +73,7 @@ function splitSentences(text) {
 function analyzeText(text, memberId) {
   const sentences = splitSentences(text).map((sentence) => {
     const normalized = sentence.replace(/[了着过]/g, "");
-    let categories = Object.entries(CATEGORIES).filter(([key, value]) => key !== "other" && value.keywords.some((word) => normalized.includes(word))).map(([key]) => key);
+    let categories = Object.entries(CATEGORIES).filter(([key, value]) => key !== "other" && (value.keywords.some((word) => normalized.includes(word)) || value.patterns?.some((pattern) => pattern.test(normalized)))).map(([key]) => key);
     if (!categories.length) categories = ["other"];
     let actions = Object.entries(ACTIONS).filter(([, value]) => value.keywords.some((word) => normalized.includes(word))).map(([key]) => key);
     if (!actions.length) actions = ["execution"];
@@ -221,7 +223,7 @@ function openRecord() {
 
 function submitRecord() {
   const text = $("#memberInput").value.trim();
-  if (text.length < 15) { showToast("再多写一点，系统才能识别完整责任。"); return; }
+  if (text.length < 4) { showToast("至少写下一件你实际承担的事情。"); return; }
   const member = currentMember(); member.text = text; member.status = "submitted"; state.assignments = {}; saveState(); renderFamily();
   const ready = state.family.members.length >= 2 && state.family.members.every((item) => item.status === "submitted");
   if (ready) { renderResults(); showSection("results"); showToast("记录已提交，共同劳动地图已更新。"); }
@@ -310,32 +312,48 @@ function renderComparison(key) {
 
 function renderPackages() {
   const members = currentAnalysis.members; const packages = currentAnalysis.packages.map((pkg) => ({ ...pkg, owner: state.assignments[pkg.id] || pkg.owner }));
-  const total = packages.reduce((sum, item) => sum + item.weight, 0) || 1;
-  const loads = Object.fromEntries(members.map((member) => [member.id, packages.filter((item) => item.owner === member.id).reduce((sum, item) => sum + item.weight, 0)]));
-  $("#balanceColumns").innerHTML = members.map((member) => {
+  const cardFor = (item) => {
+    const options = [`<option value="deferred"${item.owner === "deferred" ? " selected" : ""}>暂不协商</option>`, ...members.map((member) => `<option value="${member.id}"${item.owner === member.id ? " selected" : ""}>${escapeHtml(member.name)}</option>`)].join("");
+    return `<article class="package-card" data-package-card="${item.id}"><span class="package-handle" draggable="true" data-package-drag="${item.id}" title="拖动责任包" aria-label="拖动${item.name}">⠿</span><span class="package-icon">${item.icon}</span><div class="package-copy"><strong>${item.name}</strong><small>${item.detail}</small><label class="owner-picker"><span>主责人</span><select data-package-owner="${item.id}" aria-label="${item.name}的主责人">${options}</select></label></div></article>`;
+  };
+  const memberColumns = members.map((member) => {
     const memberPackages = packages.filter((item) => item.owner === member.id);
-    const cards = memberPackages.map((item) => `<button class="package-card" data-package="${item.id}"><span class="package-icon">${item.icon}</span><div><strong>${item.name}</strong><small>${item.detail}</small></div><span class="arrow">→</span></button>`).join("") || `<div class="member-status">暂无责任包</div>`;
-    return `<div class="load-column"><div class="column-head"><div class="member-avatar avatar-${member.color}">${escapeHtml(member.initial)}</div><div><span>${escapeHtml(member.name)}</span><strong>${Math.round(loads[member.id] / total * 100)}%</strong></div></div><div class="package-list">${cards}</div></div>`;
+    const cards = memberPackages.map(cardFor).join("") || `<div class="drop-empty">把仍需持续主责的卡片拖到这里</div>`;
+    return `<div class="load-column" data-drop-member="${member.id}"><div class="column-head"><div class="member-avatar avatar-${member.color}">${escapeHtml(member.initial)}</div><div><span>${escapeHtml(member.name)}</span><strong>${memberPackages.length} 个责任包</strong></div></div><div class="package-list">${cards}</div></div>`;
   }).join("");
-  $$('[data-package]').forEach((button) => button.addEventListener("click", () => movePackage(button.dataset.package)));
-  const ideal = 100 / members.length; const shares = members.map((member) => ({ member, value: loads[member.id] / total * 100 })).sort((a, b) => b.value - a.value);
-  const averageGap = shares.reduce((sum, item) => sum + Math.abs(item.value - ideal), 0) / members.length;
-  const score = Math.max(0, Math.round(100 - averageGap * 2)); $("#balanceScore").textContent = score;
-  if (averageGap <= 8) $("#actionSummary").innerHTML = `<strong>当前完整责任分布已经比较均衡。</strong>建议试运行一周，再共同复盘实际感受。`;
-  else { const heavier = shares[0].member; const candidate = packages.filter((item) => item.owner === heavier.id).sort((a, b) => a.weight - b.weight)[0]; $("#actionSummary").innerHTML = `<strong>${escapeHtml(heavier.name)}仍承担较多完整责任。</strong>${candidate ? `可以先尝试完整转交“${candidate.name}”。` : "可以先选择一个边界清晰的责任包。"}`; }
+  const deferred = packages.filter((item) => item.owner === "deferred");
+  const deferredColumn = `<div class="load-column deferred-column" data-drop-member="deferred"><div class="column-head"><div class="member-avatar deferred-avatar">—</div><div><span>暂不协商</span><strong>${deferred.length} 个事项</strong></div></div><p class="column-note">一次性、已结束或暂时不确定是否持续的事项放这里。</p><div class="package-list">${deferred.map(cardFor).join("") || `<div class="drop-empty">把下周不一定继续的事项拖到这里</div>`}</div></div>`;
+  $("#balanceColumns").innerHTML = memberColumns + deferredColumn;
+  $$('[data-package-drag]').forEach((handle) => {
+    handle.addEventListener("dragstart", (event) => { draggedPackageId = handle.dataset.packageDrag; const card = handle.closest(".package-card"); card.classList.add("dragging"); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", draggedPackageId); event.dataTransfer.setDragImage(card, 24, 24); });
+    handle.addEventListener("dragend", () => { draggedPackageId = null; $$(".package-card").forEach((card) => card.classList.remove("dragging")); $$("[data-drop-member]").forEach((column) => column.classList.remove("drop-target")); });
+  });
+  $$('[data-drop-member]').forEach((column) => {
+    column.addEventListener("dragover", (event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; column.classList.add("drop-target"); });
+    column.addEventListener("dragleave", (event) => { if (!column.contains(event.relatedTarget)) column.classList.remove("drop-target"); });
+    column.addEventListener("drop", (event) => { event.preventDefault(); const id = event.dataTransfer.getData("text/plain") || draggedPackageId; column.classList.remove("drop-target"); if (id) assignPackage(id, column.dataset.dropMember); });
+  });
+  $$('[data-package-owner]').forEach((select) => select.addEventListener("change", () => assignPackage(select.dataset.packageOwner, select.value)));
+  const counts = members.map((member) => ({ member, count: packages.filter((item) => item.owner === member.id).length })).sort((a, b) => b.count - a.count);
+  const covered = counts.filter((item) => item.count > 0).length; $("#responsibilityCoverage").textContent = covered; $("#responsibilityTotal").textContent = `/ ${members.length}`;
+  const deferredCopy = deferred.length ? `另有 ${deferred.length} 个事项暂不纳入持续责任。` : "目前没有事项被标记为暂不协商。";
+  if (!counts[0]?.count) $("#actionSummary").innerHTML = `<strong>还没有确认持续责任。</strong>先把需要长期主责的卡片拖到对应成员名下。`;
+  else $("#actionSummary").innerHTML = `<strong>${escapeHtml(counts[0].member.name)}目前主责 ${counts[0].count} 个持续责任领域。</strong>${deferredCopy} 这只是协商提示，不是对个人投入的评价。`;
 }
-function movePackage(id) {
-  const members = currentAnalysis.members; const pkg = currentAnalysis.packages.find((item) => item.id === id); const owner = state.assignments[id] || pkg.owner;
-  const next = members[(members.findIndex((member) => member.id === owner) + 1) % members.length]; state.assignments[id] = next.id;
-  saveState(); renderPackages(); showToast(`“${pkg.name}”完整责任已转交给“${next.name}”。`);
+function assignPackage(id, ownerId) {
+  const pkg = currentAnalysis.packages.find((item) => item.id === id); if (!pkg) return;
+  state.assignments[id] = ownerId; saveState(); renderPackages();
+  const label = ownerId === "deferred" ? "暂不协商" : currentAnalysis.members.find((member) => member.id === ownerId)?.name;
+  showToast(`“${pkg.name}”已调整为：${label || "待确认"}。`);
 }
 
 function exportPlan() {
-  if (!currentAnalysis) return; const groups = Object.fromEntries(currentAnalysis.members.map((member) => [member.id, []]));
-  currentAnalysis.packages.forEach((pkg) => { const owner = state.assignments[pkg.id] || pkg.owner; groups[owner].push(`- ${pkg.name}：${pkg.detail.replaceAll(" · ", "、")}`); });
-  const sections = currentAnalysis.members.map((member) => `${member.name}负责：\n${groups[member.id].join("\n") || "- 待共同确认"}`).join("\n\n");
-  const content = `《${state.family.name}下周家庭分工约定》\n\n我们约定转交的是完整责任，而不只是最后一步。\n\n${sections}\n\n这份约定用于帮助我们看见劳动并减少遗漏，不用于评价任何人的价值。`;
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${state.family.name}-下周分工约定.txt`; link.click(); URL.revokeObjectURL(url); showToast("分工约定已导出。");
+  if (!currentAnalysis) return; const groups = Object.fromEntries([...currentAnalysis.members.map((member) => [member.id, []]), ["deferred", []]]);
+  currentAnalysis.packages.forEach((pkg) => { const owner = state.assignments[pkg.id] || pkg.owner; (groups[owner] ||= []).push(`- ${pkg.name}：${pkg.detail.replaceAll(" · ", "、")}`); });
+  const sections = currentAnalysis.members.map((member) => `${member.name}持续主责：\n${groups[member.id].join("\n") || "- 暂无"}`).join("\n\n");
+  const deferred = `暂不纳入持续责任：\n${groups.deferred.join("\n") || "- 暂无"}`;
+  const content = `《${state.family.name}持续责任协商记录》\n\n本记录依据本周发生的事项发现可能长期存在的责任，不代表下周必须重复同样的任务。我们协商的是谁负责发现、计划、执行协调和后续跟进。\n\n${sections}\n\n${deferred}\n\n这份记录用于帮助家庭减少遗漏和重复沟通，不用于评价任何人的价值。`;
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${state.family.name}-持续责任协商记录.txt`; link.click(); URL.revokeObjectURL(url); showToast("责任协商记录已导出。");
 }
 
 $("#createFamilyButton").addEventListener("click", () => openOnboarding("create"));
