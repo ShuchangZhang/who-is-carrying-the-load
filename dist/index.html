@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#173f3a" />
-    <meta name="description" content="家庭成员分别记录自己的劳动与心智负担，合并生成共同讨论的责任地图。" />
+    <meta name="description" content="家庭成员从各自的手机加入家庭，分别记录自己的劳动与心智负担，再共同看见完整责任。" />
     <title>谁在操心｜家庭隐形劳动地图</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -15,201 +15,137 @@
           <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
           <span>谁在操心</span>
         </a>
-        <div class="header-note"><span class="privacy-dot"></span>双方提交前，彼此不可见</div>
+        <nav class="header-nav" aria-label="主导航">
+          <button class="nav-button" data-nav="family">我的家庭</button>
+          <button class="nav-button" data-nav="record">我的记录</button>
+          <span class="privacy-note"><i></i>记录默认仅自己可见</span>
+        </nav>
       </header>
 
       <main id="top">
-        <section class="hero">
+        <section class="hero" id="hero">
           <div class="hero-copy">
             <p class="eyebrow">共同看见 · 重新分担</p>
             <h1>家务不止是“做了什么”，<br /><em>还有谁一直记着。</em></h1>
-            <p class="hero-text">家庭成员分别记录自己承担的执行、计划、提醒和协调。双方都完成后，系统才会合并视角，帮助你们看见完整责任，而不是评判谁做得不够。</p>
+            <p class="hero-text">创建一个家庭空间，把邀请链接发给家人。每个人在自己的手机上独立记录，所有人完成后再合并成一张共同的劳动地图。</p>
             <div class="hero-actions">
-              <button class="button button-primary" id="startButton">开始分别记录</button>
-              <button class="button button-quiet" id="demoButton"><span class="play-icon">▶</span>载入演示家庭</button>
+              <button class="button button-primary" id="createFamilyButton">创建我的家庭</button>
+              <button class="button button-quiet" id="joinFamilyButton">使用邀请码加入</button>
+              <button class="text-button" id="demoButton"><span>▶</span>载入演示家庭</button>
             </div>
-            <div class="trust-row" aria-label="产品特点">
-              <span>各自填写</span><b></b><span>共同解锁</span><b></b><span>不做道德评分</span>
-            </div>
+            <div class="trust-row"><span>不同手机填写</span><b></b><span>提交前互不可见</span><b></b><span>合并后共同讨论</span></div>
           </div>
-          <div class="hero-visual" aria-label="可见劳动与隐形劳动示意图">
-            <div class="orbit orbit-one"></div>
-            <div class="orbit orbit-two"></div>
-            <div class="person person-a"><span>予</span><small>计划 · 提醒</small></div>
-            <div class="person person-b"><span>然</span><small>执行 · 接送</small></div>
-            <div class="shared-core">
-              <span class="core-label">共同的家</span>
-              <strong>24</strong>
-              <small>项被看见的责任</small>
-            </div>
-            <div class="float-card float-one"><span>🧠</span><p>记得预约体检</p></div>
-            <div class="float-card float-two"><span>🗓</span><p>协调周末日程</p></div>
-            <div class="float-card float-three"><span>🛒</span><p>决定本周吃什么</p></div>
+          <div class="hero-visual" aria-label="家庭成员从各自手机加入同一家庭">
+            <div class="family-orbit orbit-a"></div><div class="family-orbit orbit-b"></div>
+            <div class="phone phone-a"><span class="phone-dot avatar-a">予</span><small>我的手机</small><strong>已记录 8 项</strong></div>
+            <div class="phone phone-b"><span class="phone-dot avatar-b">然</span><small>家人的手机</small><strong>已记录 6 项</strong></div>
+            <div class="family-core"><small>松果之家</small><strong>SG · 4826</strong><span>2 位成员已加入</span></div>
+            <div class="link-line link-a"></div><div class="link-line link-b"></div>
+            <div class="floating-note note-a">🔗 邀请链接已发送</div>
+            <div class="floating-note note-b">✓ 双方提交后合并</div>
           </div>
         </section>
 
-        <section class="workspace" id="workspace">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">第一步 · 各自记录</p>
-              <h2>先说说你这一周在操心什么。</h2>
-            </div>
-            <div class="stepper" aria-label="当前进度">
-              <div class="step active"><span>1</span><p>分别记录</p></div>
-              <i></i>
-              <div class="step"><span>2</span><p>合并视角</p></div>
-              <i></i>
-              <div class="step"><span>3</span><p>共同调整</p></div>
-            </div>
+        <section class="onboarding hidden" id="onboarding">
+          <div class="onboarding-copy">
+            <p class="eyebrow" id="onboardingEyebrow">创建家庭空间</p>
+            <h2 id="onboardingTitle">先给你们的家庭起个名字。</h2>
+            <p id="onboardingDescription">创建后会得到一个邀请码和邀请链接，其他成员可以在自己的手机上加入。</p>
           </div>
+          <div class="onboarding-card" id="createPanel">
+            <label for="familyName">家庭名称</label>
+            <input id="familyName" type="text" value="松果之家" maxlength="18" />
+            <label for="ownerName">你的称呼</label>
+            <input id="ownerName" type="text" value="林予" maxlength="10" />
+            <button class="button button-primary wide" id="confirmCreateButton">创建家庭空间</button>
+          </div>
+          <div class="onboarding-card hidden" id="joinPanel">
+            <label for="inviteCodeInput">六位邀请码</label>
+            <input id="inviteCodeInput" type="text" placeholder="例如 SG4826" maxlength="8" />
+            <label for="joinName">你希望家人看到的称呼</label>
+            <input id="joinName" type="text" placeholder="例如 周然" maxlength="10" />
+            <button class="button button-primary wide" id="confirmJoinButton">加入这个家庭</button>
+          </div>
+        </section>
 
-          <div class="member-grid">
-            <article class="member-card active" data-member-card="a">
-              <div class="member-top">
-                <div class="member-avatar avatar-a">予</div>
-                <div><span class="member-kicker">家庭成员 A</span><h3>林予</h3></div>
-                <span class="status-pill" id="statusA">填写中</span>
-              </div>
-              <label for="inputA">用自己的话描述，不需要整理成清单。</label>
-              <textarea id="inputA" placeholder="例如：这周我安排了孩子体检，查了周末去哪儿，也一直记着冰箱里快过期的菜……"></textarea>
-              <div class="prompt-chips">
-                <button data-add="我记得并提醒了">我记得并提醒了</button>
-                <button data-add="我提前计划了">我提前计划了</button>
-                <button data-add="我实际完成了">我实际完成了</button>
-              </div>
-              <button class="button submit-button" id="submitA">提交我的记录</button>
+        <section class="family-space hidden" id="familySpace">
+          <div class="family-banner">
+            <div class="family-identity"><span class="family-icon">⌂</span><div><p>家庭空间</p><h2 id="familyDisplayName">松果之家</h2></div></div>
+            <div class="invite-box"><span>家庭邀请码</span><strong id="inviteCode">SG4826</strong><button id="copyCodeButton" aria-label="复制邀请码">复制</button></div>
+            <button class="button button-light" id="copyLinkButton">复制邀请链接</button>
+          </div>
+          <div class="family-grid">
+            <article class="family-main-card">
+              <div class="card-heading"><div><p class="eyebrow">家庭成员</p><h3>大家在自己的设备上分别完成。</h3></div><span id="memberCount">2 / 4</span></div>
+              <div class="member-list" id="memberList"></div>
+              <div class="family-tip"><span>🔒</span><p>成员提交前，其他人看不到其原始记录。合并分析只展示劳动类型和责任结构。</p></div>
             </article>
+            <aside class="family-side-card">
+              <p class="eyebrow">本周进度</p>
+              <div class="progress-ring" id="progressRing"><strong id="submittedCount">0</strong><span>/ 2</span><small>已提交</small></div>
+              <p id="progressCopy">你可以先完成自己的记录，系统会在其他成员提交后通知你。</p>
+              <button class="button button-primary wide" id="recordMineButton">记录我的一周</button>
+              <button class="button button-quiet wide" id="viewResultsButton" disabled>等待其他成员</button>
+            </aside>
+          </div>
+        </section>
 
-            <article class="member-card locked" data-member-card="b">
-              <div class="member-top">
-                <div class="member-avatar avatar-b">然</div>
-                <div><span class="member-kicker">家庭成员 B</span><h3>周然</h3></div>
-                <span class="status-pill" id="statusB">等待填写</span>
-              </div>
-              <label for="inputB">切换给另一位成员后，再独立完成记录。</label>
-              <textarea id="inputB" placeholder="例如：这周我负责接送孩子、洗碗、倒垃圾，也处理了家里的维修……" disabled></textarea>
+        <section class="record-space hidden" id="recordSpace">
+          <button class="back-button" id="backToFamily">← 返回家庭空间</button>
+          <div class="record-layout">
+            <div class="record-copy">
+              <p class="eyebrow">只记录你自己</p>
+              <h2><span id="currentMemberName">林予</span>，这一周你在操心什么？</h2>
+              <p>不用整理成清单，也不用替其他人填写。写下你实际完成、提前计划、持续提醒或负责跟进的事情。</p>
+              <div class="analysis-preview" id="analysisPreview"><span>实时识别</span><strong>开始输入后，这里会显示识别到的劳动类型。</strong></div>
+            </div>
+            <div class="record-card">
+              <label for="memberInput">我的一周记录</label>
+              <textarea id="memberInput" placeholder="例如：我给孩子查了医院并预约体检，提前准备证件，记着复诊时间；每天决定晚饭吃什么，也一直留意家里哪些日用品快用完……"></textarea>
               <div class="prompt-chips">
-                <button data-add="我记得并提醒了" disabled>我记得并提醒了</button>
-                <button data-add="我提前计划了" disabled>我提前计划了</button>
-                <button data-add="我实际完成了" disabled>我实际完成了</button>
+                <button data-prompt="我实际完成了：">我实际完成了</button><button data-prompt="我提前计划了：">我提前计划了</button><button data-prompt="我一直记着并提醒：">我一直记着并提醒</button><button data-prompt="我负责协调和跟进：">我负责协调和跟进</button>
               </div>
-              <button class="button submit-button" id="submitB" disabled>请先由成员 A 提交</button>
-            </article>
+              <div class="record-footer"><p>内容仅保存在当前浏览器的演示家庭中。</p><button class="button button-primary" id="submitRecordButton">提交我的记录</button></div>
+            </div>
           </div>
+        </section>
 
-          <div class="merge-gate" id="mergeGate">
-            <div class="gate-icon">◌</div>
-            <div><strong>合并视角尚未解锁</strong><p>两位成员都提交后，系统才会展示共同的劳动地图。</p></div>
-            <button class="button button-primary" id="mergeButton" disabled>等待双方提交</button>
-          </div>
+        <section class="waiting-space hidden" id="waitingSpace">
+          <div class="waiting-card"><div class="waiting-illustration"><span>予</span><i></i><span>然</span></div><p class="eyebrow">你的记录已提交</p><h2>等家人完成后，再一起看结果。</h2><p>你无需把手机交给下一位成员。把邀请链接发给家人，他们会在自己的设备上加入并填写。</p><div class="waiting-actions"><button class="button button-primary" id="waitingCopyLink">复制邀请链接</button><button class="button button-quiet" id="simulateFamilyButton">演示家人完成提交</button></div></div>
         </section>
 
         <section class="results hidden" id="results">
-          <div class="result-intro">
-            <p class="eyebrow">第二步 · 合并视角</p>
-            <h2>你们做的比彼此看到的更多。</h2>
-            <p>这不是一份输赢报告。它把两个人的描述放在一起，补全一项家庭责任从“想到”到“完成”的全过程。</p>
-          </div>
-
+          <div class="result-topbar"><button class="back-button" id="resultsBack">← 返回家庭空间</button><span id="analysisFamilyName">松果之家 · 本周共同视角</span></div>
+          <div class="result-intro"><p class="eyebrow">合并视角</p><h2>你们做的比彼此看到的更多。</h2><p>分析根据双方本周记录实时生成。修改任何一位成员的输入，下面的任务、占比和责任包都会随之变化。</p></div>
           <div class="insight-grid">
-            <article class="metric-card coral">
-              <span>共同确认</span><strong>18<small>项</small></strong><p>双方都注意到的家庭劳动。</p>
-            </article>
-            <article class="metric-card blue">
-              <span>此前未被看见</span><strong>11<small>项</small></strong><p>只出现在一方描述中的劳动。</p>
-            </article>
-            <article class="metric-card green">
-              <span>完整责任包</span><strong>7<small>组</small></strong><p>包含计划、执行和跟进的连续责任。</p>
-            </article>
-            <article class="headline-card">
-              <div class="quote-mark">“</div>
-              <p>林予承担了 <b>54%</b> 的可见任务，却承担了 <b>78%</b> 的计划与提醒。</p>
-              <small>差异主要来自孩子健康、日用品库存和周末安排。</small>
-            </article>
+            <article class="metric-card coral"><span>共同关注</span><strong id="sharedMetric">0<small>类</small></strong><p>双方都提到的家庭领域。</p></article>
+            <article class="metric-card blue"><span>被识别的劳动</span><strong id="taskMetric">0<small>项</small></strong><p>从两份记录中提取的具体事项。</p></article>
+            <article class="metric-card green"><span>完整责任包</span><strong id="packageMetric">0<small>组</small></strong><p>包含计划、执行和跟进的连续责任。</p></article>
+            <article class="headline-card"><div class="quote-mark">“</div><p id="headlineInsight">正在生成共同视角。</p><small id="headlineDetail">系统分析的是任务结构，而不是评价个人。</small></article>
           </div>
-
           <div class="analysis-grid">
             <article class="panel iceberg-panel">
-              <div class="panel-heading">
-                <div><span class="panel-number">01</span><h3>劳动冰山</h3></div>
-                <p>点击水面上的任务，看看它下面藏着什么。</p>
-              </div>
-              <div class="iceberg">
-                <div class="sky-label">看得见的执行</div>
-                <div class="visible-tasks">
-                  <button class="task-chip active" data-task="health">带孩子体检</button>
-                  <button class="task-chip" data-task="meal">做晚饭</button>
-                  <button class="task-chip" data-task="weekend">周末出游</button>
-                </div>
-                <div class="water-line"><span>水面</span></div>
-                <div class="iceberg-body">
-                  <div class="ice-shape"></div>
-                  <div class="hidden-task-list" id="hiddenTaskList"></div>
-                  <div class="underwater-label">看不见的计划、提醒与跟进</div>
-                </div>
-              </div>
+              <div class="panel-heading"><div><span class="panel-number">01</span><h3>劳动冰山</h3></div><p>选择一个家庭领域，看看输入中可见的执行和背后的心智劳动。</p></div>
+              <div class="iceberg-stage"><img src="assets/iceberg-gouache.png" alt="淡雅水彩风格冰山，水下部分远大于水上部分" /><span class="ice-label label-visible">看得见的执行</span><span class="ice-label label-hidden">看不见的计划、提醒与跟进</span><div class="ice-visible" id="visibleTaskList"></div><div class="ice-hidden" id="hiddenTaskList"></div></div>
+              <div class="category-tabs" id="categoryTabs"></div>
             </article>
-
             <article class="panel compare-panel">
-              <div class="panel-heading">
-                <div><span class="panel-number">02</span><h3>同一件事，两种视角</h3></div>
-                <p>差异不是错误，而是补全责任链的线索。</p>
-              </div>
-              <div class="comparison-title"><span>孩子体检</span><small>发现 4 个此前未被共同看见的步骤</small></div>
-              <div class="voice-card voice-a">
-                <div class="mini-avatar avatar-a">予</div>
-                <p>“我查了三家医院，预约时间，准备证件，前一天提醒，还把复诊日期记进日历。”</p>
-              </div>
-              <div class="merge-line"><span>合并后</span></div>
-              <div class="voice-card voice-b">
-                <div class="mini-avatar avatar-b">然</div>
-                <p>“我请了半天假，开车接送，在医院陪孩子检查，然后去药房取药。”</p>
-              </div>
-              <div class="responsibility-chain">
-                <div><span>1</span><p>发现需求</p><small>林予</small></div>
-                <i></i><div><span>2</span><p>计划预约</p><small>林予</small></div>
-                <i></i><div><span>3</span><p>现场执行</p><small>周然</small></div>
-                <i></i><div><span>4</span><p>后续跟进</p><small>共同</small></div>
-              </div>
+              <div class="panel-heading"><div><span class="panel-number">02</span><h3>同一领域，两种视角</h3></div><p>系统从双方原始记录中选择真实句子进行对照。</p></div>
+              <div class="comparison-title"><span id="compareCategory">共同事项</span><small id="compareBadge">等待分析</small></div>
+              <div class="voice-card voice-a"><div class="mini-avatar avatar-a">予</div><p id="voiceA">尚未识别到成员 A 的相关描述。</p></div><div class="merge-line"><span>合并后</span></div><div class="voice-card voice-b"><div class="mini-avatar avatar-b">然</div><p id="voiceB">尚未识别到成员 B 的相关描述。</p></div>
+              <div class="responsibility-chain" id="responsibilityChain"></div>
             </article>
           </div>
-
-          <div class="rebalance-section">
-            <div class="section-heading compact">
-              <div><p class="eyebrow">第三步 · 共同调整</p><h2>不只分一件事，要转交完整责任。</h2></div>
-              <div class="score-box"><span>当前平衡度</span><strong id="balanceScore">42</strong><small>/ 100</small></div>
-            </div>
-
-            <div class="balance-layout">
-              <div class="load-column column-a">
-                <div class="column-head"><div class="member-avatar avatar-a">予</div><div><span>林予</span><strong id="loadA">78%</strong></div></div>
-                <div class="package-list" id="packagesA"></div>
-              </div>
-              <div class="balance-center" aria-hidden="true">
-                <div class="balance-ring"><span id="ringScore">42</span><small>平衡度</small></div>
-                <p>点击责任包，在两人之间完整转交。</p>
-              </div>
-              <div class="load-column column-b">
-                <div class="column-head"><div class="member-avatar avatar-b">然</div><div><span>周然</span><strong id="loadB">22%</strong></div></div>
-                <div class="package-list" id="packagesB"></div>
-              </div>
-            </div>
-
-            <div class="action-bar">
-              <div><span class="spark">✦</span><p id="actionSummary"><strong>建议先转交“日用品库存”责任包。</strong>它边界清晰、风险较低，适合成为第一次完整责任转移。</p></div>
-              <button class="button button-primary" id="exportButton">导出下周分工约定</button>
-            </div>
-          </div>
+          <section class="rebalance-section">
+            <div class="section-heading compact"><div><p class="eyebrow">共同调整</p><h2>不只分一件事，要转交完整责任。</h2></div><div class="score-box"><span>当前平衡度</span><strong id="balanceScore">—</strong><small>/ 100</small></div></div>
+            <div class="balance-layout"><div class="load-column"><div class="column-head"><div class="member-avatar avatar-a">予</div><div><span id="columnNameA">林予</span><strong id="loadA">0%</strong></div></div><div class="package-list" id="packagesA"></div></div><div class="balance-center"><div class="balance-ring"><span id="ringScore">—</span><small>平衡度</small></div><p>点击责任包，在两人之间完整转交。</p></div><div class="load-column"><div class="column-head"><div class="member-avatar avatar-b">然</div><div><span id="columnNameB">周然</span><strong id="loadB">0%</strong></div></div><div class="package-list" id="packagesB"></div></div></div>
+            <div class="action-bar"><div><span class="spark">✦</span><p id="actionSummary">系统会根据当前责任分布提供下一步建议。</p></div><button class="button button-primary" id="exportButton">导出下周分工约定</button></div>
+          </section>
         </section>
       </main>
 
-      <footer>
-        <div class="brand footer-brand"><span class="brand-mark"><i></i><i></i><i></i></span><span>谁在操心</span></div>
-        <p>让劳动被看见，让责任能被共同承担。</p>
-        <span>概念 Demo · 数据仅保存在当前浏览器</span>
-      </footer>
+      <footer><div class="brand footer-brand"><span class="brand-mark"><i></i><i></i><i></i></span><span>谁在操心</span></div><p>让劳动被看见，让责任能被共同承担。</p><span>概念 Demo · 本地规则分析</span></footer>
     </div>
-
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="app.js"></script>
   </body>
