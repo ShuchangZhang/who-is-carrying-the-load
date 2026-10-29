@@ -61,13 +61,14 @@ function normalizeState(saved) {
   saved.family.members.forEach((member, index) => {
     member.role = member.id === saved.family.ownerId ? "owner" : "member";
     member.color ||= MEMBER_COLORS[index % MEMBER_COLORS.length];
+    member.customColor ||= MEMBER_COLOR_OPTIONS[member.color]?.hex || MEMBER_COLOR_OPTIONS.a.hex;
     member.initial ||= initials(member.name);
   });
   return saved;
 }
 function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 function initials(name) { return (name || "家").slice(-1); }
-function memberColorHex(member) { return MEMBER_COLOR_OPTIONS[member?.color]?.hex || MEMBER_COLOR_OPTIONS.a.hex; }
+function memberColorHex(member) { return member?.customColor || MEMBER_COLOR_OPTIONS[member?.color]?.hex || MEMBER_COLOR_OPTIONS.a.hex; }
 function escapeHtml(value = "") { return value.replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char])); }
 function makeCode(name) {
   const letters = (name.match(/[A-Za-z]/g) || ["H", "M"]).join("").slice(0, 2).toUpperCase().padEnd(2, "H");
@@ -234,7 +235,7 @@ function renderFamily() {
     const role = member.id === state.family.ownerId ? `<span class="role-badge">管理员</span>` : "";
     const switchButton = state.demo && member.id !== state.currentMemberId ? `<button class="member-action" data-switch-member="${member.id}">切换测试视角</button>` : "";
     const adminButtons = admin && member.id !== state.family.ownerId ? `<button class="member-action" data-transfer-admin="${member.id}">设为管理员</button><button class="member-action danger" data-remove-member="${member.id}">移除</button>` : "";
-    const colorPicker = member.id === state.currentMemberId ? `<div class="member-color-picker"><span>我的代表色</span>${MEMBER_COLORS.map((color) => `<button class="color-swatch${member.color === color ? " active" : ""}" data-member-color="${color}" data-color-member="${member.id}" style="--swatch:${MEMBER_COLOR_OPTIONS[color].hex}" aria-label="选择${MEMBER_COLOR_OPTIONS[color].name}" title="${MEMBER_COLOR_OPTIONS[color].name}"></button>`).join("")}</div>` : "";
+    const colorPicker = member.id === state.currentMemberId ? `<label class="member-color-picker"><span>代表色</span><span class="color-wheel" style="--selected-color:${memberColorHex(member)}"><input type="color" value="${memberColorHex(member)}" data-member-custom-color data-color-member="${member.id}" aria-label="自定义我的代表色" /></span><small>点色环自定义</small></label>` : "";
     return `<div class="member-row" style="--member-color:${memberColorHex(member)}"><div class="member-avatar avatar-${member.color}">${escapeHtml(member.initial)}</div><div class="member-info"><strong>${escapeHtml(member.name)}${member.id === state.currentMemberId ? "（我）" : ""}${role}</strong><small>${member.id === state.currentMemberId ? "当前设备" : "通过邀请链接加入"}</small><div class="member-actions">${switchButton}${adminButtons}</div>${colorPicker}</div><span class="member-status ${member.status === "submitted" ? "done" : "waiting"}">${member.status === "submitted" ? "本周已提交" : "等待记录"}</span></div>`;
   });
   if (members.length < 2) rows.push(`<div class="member-row"><div class="member-avatar" style="background:#d9ded9;color:#80918b">+</div><div><strong>等待家人加入</strong><small>发送邀请码 ${state.family.code}</small></div><span class="member-status">尚未加入</span></div>`);
@@ -243,7 +244,7 @@ function renderFamily() {
   $$('[data-switch-member]').forEach((button) => button.addEventListener("click", () => switchTestMember(button.dataset.switchMember)));
   $$('[data-transfer-admin]').forEach((button) => button.addEventListener("click", () => transferAdmin(button.dataset.transferAdmin)));
   $$('[data-remove-member]').forEach((button) => button.addEventListener("click", () => openRemoveMemberModal(button.dataset.removeMember)));
-  $$('[data-member-color]').forEach((button) => button.addEventListener("click", () => updateMemberColor(button.dataset.colorMember, button.dataset.memberColor)));
+  $$('[data-member-custom-color]').forEach((input) => input.addEventListener("change", () => updateMemberColor(input.dataset.colorMember, input.value)));
   const mine = currentMember(); $("#recordMineButton").textContent = mine?.status === "submitted" ? "修改我的记录" : "记录我的一周";
   const ready = members.length >= 2 && members.every((member) => member.status === "submitted");
   $("#viewResultsButton").disabled = !ready; $("#viewResultsButton").textContent = ready ? "查看共同劳动地图" : "等待其他成员";
@@ -251,9 +252,9 @@ function renderFamily() {
 }
 
 function updateMemberColor(memberId, color) {
-  if (memberId !== state.currentMemberId || !MEMBER_COLOR_OPTIONS[color]) return;
+  if (memberId !== state.currentMemberId || !/^#[0-9a-f]{6}$/i.test(color)) return;
   const member = currentMember(); if (!member) return;
-  member.color = color; saveState(); renderFamily(); showToast(`已将你的代表色改为${MEMBER_COLOR_OPTIONS[color].name}。`);
+  member.customColor = color.toLowerCase(); saveState(); renderFamily(); showToast("代表色已更新，劳动地图中的颜色也会同步变化。");
 }
 
 function addTestMember() {
@@ -330,6 +331,7 @@ function openClarification() {
   const member = currentMember(); if (!member) return;
   const questions = buildClarificationQuestions(member);
   $("#clarificationMemberName").textContent = member.name;
+  $("#clarificationPromptCount").textContent = questions.length === 0 ? "信息已经完整。" : questions.length === 1 ? "再补充一个细节。" : "再补充两个细节。";
   $("#clarificationList").innerHTML = questions.length ? questions.map((question, index) => `<article class="clarification-card"><span>${question.label}</span><h3>${escapeHtml(question.prompt)}</h3><textarea data-clarification-answer="${index}" data-context="${escapeHtml(question.context)}" placeholder="${escapeHtml(question.placeholder)}"></textarea></article>`).join("") : `<article class="clarification-card complete"><span>信息完整</span><h3>目前的描述已经包含清晰的劳动事项，可以生成劳动地图。</h3></article>`;
   showSection("clarifySpace");
 }
@@ -358,7 +360,10 @@ function submitRecord() {
   if (text.length < 4) { showToast("至少写下一件你实际承担的事情。"); return; }
   const member = currentMember(); member.text = text; member.status = "submitted"; state.assignments = {}; delete state.clarifications[member.id]; saveState(); renderFamily();
   const ready = state.family.members.length >= 2 && state.family.members.every((item) => item.status === "submitted");
-  if (ready) { openClarification(); showToast("记录已提交，请补充两个细节。"); }
+  if (ready) {
+    const questionCount = buildClarificationQuestions(member).length;
+    openClarification(); showToast(questionCount ? `记录已提交，请补充${questionCount === 1 ? "一个" : "两个"}细节。` : "记录已提交，可以生成劳动地图。");
+  }
   else { showSection("waitingSpace"); showToast("你的记录已提交，正在等待家人。"); }
 }
 
@@ -367,7 +372,9 @@ function simulateFamilySubmission() {
   state.family.members.forEach((member, index) => {
     if (member.id !== state.currentMemberId && member.status !== "submitted") { member.status = "submitted"; member.text ||= DEMO_TEXTS[index % DEMO_TEXTS.length]; }
   });
-  saveState(); renderFamily(); openClarification(); showToast("家人的演示记录已同步，请补充两个细节。");
+  saveState(); renderFamily();
+  const questionCount = buildClarificationQuestions(currentMember()).length;
+  openClarification(); showToast(questionCount ? `家人的演示记录已同步，请补充${questionCount === 1 ? "一个" : "两个"}细节。` : "家人的演示记录已同步，可以生成劳动地图。");
 }
 
 async function copyInvite(kind = "link") {
