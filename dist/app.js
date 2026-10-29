@@ -78,7 +78,14 @@ function showSection(id) {
 }
 
 function splitSentences(text) {
-  return text.split(/[。！？!?；;，,、\n]+/).map((item) => item.trim()).filter((item) => item.length > 1);
+  const fragments = text.split(/[。！？!?；;\n]+/).flatMap((block) => block.split(/[，,、]+/)).map((item) => item.trim()).filter((item) => item.length > 1);
+  return fragments.reduce((sentences, item) => {
+    const isMeasure = /^(?:每天|每周|每月|一周|每次|共|总共|大约|约|持续|花了|用了)/.test(item)
+      && /(?:\d+|[一二三四五六七八九十两]+)\s*(?:次|小时|天|分钟)/.test(item);
+    if (isMeasure && sentences.length) sentences[sentences.length - 1] += `，${item}`;
+    else sentences.push(item);
+    return sentences;
+  }, []);
 }
 function parseCount(value) {
   if (/^\d+$/.test(value)) return Number(value);
@@ -99,8 +106,12 @@ function estimateEffort(sentence, actions) {
   if (/全天候|一整天|整天|全天/.test(sentence)) { score += 6; reasons.push("长时间在场"); breakdown.push("全天投入 +6"); }
   else if (/半天/.test(sentence)) { score += 4; reasons.push("半天投入"); breakdown.push("半天投入 +4"); }
   else if (/\d+\s*小时|[一二三四五六七八九十两]+\s*个?小时/.test(sentence)) { score += 3; reasons.push("明确时长"); breakdown.push("明确时长 +3"); }
+  const daily = sentence.match(/每天(?:\s*(\d+|[一二三四五六七八九十两]+)\s*次)?/);
   const repeat = sentence.match(/(\d+|[一二三四五六七八九十两]+)\s*次/);
-  if (repeat) {
+  if (daily) {
+    const perDay = daily[1] ? parseCount(daily[1]) : 1; const count = perDay * 7; const repeatScore = Math.min(4, Math.max(0, count - 1));
+    score += repeatScore; reasons.push(`每周约 ${count} 次`); breakdown.push(`每天 ${perDay} 次（按一周 ${count} 次） +${repeatScore}`);
+  } else if (repeat) {
     const count = parseCount(repeat[1]); const repeatScore = Math.min(4, Math.max(0, count - 1)); score += repeatScore; reasons.push(`${count} 次重复`); breakdown.push(`${count} 次重复 +${repeatScore}`);
   }
   if (/盯|监督|值守|陪同|来回|搬运|清洁现场|照护/.test(sentence)) { score += 2; reasons.push("持续现场投入"); breakdown.push("持续现场 +2"); }
@@ -275,7 +286,13 @@ function buildClarificationQuestions(member) {
   const others = state.family.members.filter((item) => item.id !== member.id && item.status === "submitted").map((item) => ({ member: item, data: analyzeText(item.text, item.id) }));
   const questions = [];
   const vague = current.sentences.find((item) => /很多|一些|经常|一直|不少|各种|处理|帮忙/.test(item.text) || (!/(?:\d+|[一二三四五六七八九十两]+)\s*(?:次|小时|天|分钟)|全天|半天/.test(item.text) && item.effort.value <= 3));
-  if (vague) questions.push({ type: "detail", context: vague.text, label: "把投入量化", prompt: `“${vague.text}”大约花了多久、发生了几次，或者包含了哪些来回沟通？`, placeholder: "例如：前后沟通了 3 次，总共约 40 分钟。" });
+  if (vague) {
+    const hasCoordination = vague.actions.some((action) => action === "planning" || action === "coordination" || action === "followup");
+    const hasReminder = vague.actions.includes("reminder");
+    const prompt = hasCoordination ? `“${vague.text}”大约花了多久、联系了几次，还做了哪些准备或跟进？` : hasReminder ? `“${vague.text}”这一周提醒或惦记了几次，每次大约花了多久？` : `“${vague.text}”每次大约花了多久，这一周做了几次？`;
+    const placeholder = hasCoordination ? "例如：前后联系了 3 次，总共约 40 分钟。" : hasReminder ? "例如：这周提醒了 4 次，每次约 5 分钟。" : "例如：每天 1 次，每次约 20 分钟。";
+    questions.push({ type: "detail", context: vague.text, label: "把投入量化", prompt, placeholder });
+  }
   const currentCategories = new Set(current.sentences.map((item) => item.fineCategory));
   const categoryMentions = {};
   others.forEach(({ member: otherMember, data }) => new Set(data.sentences.map((item) => item.fineCategory)).forEach((key) => {
@@ -302,7 +319,11 @@ function finishClarification(applyAnswers) {
   const member = currentMember(); if (!member) return;
   if (applyAnswers) {
     const additions = $$('[data-clarification-answer]').map((field) => ({ answer: field.value.trim(), context: field.dataset.context })).filter((item) => item.answer);
-    if (additions.length) member.text += additions.map((item) => `\n补充说明（${item.context}）：${item.answer.replace(/[，,、；;。！？!?]+/g, " ")}`).join("");
+    additions.forEach((item) => {
+      const detail = item.answer.replace(/[，,、；;。！？!?]+/g, " ");
+      if (member.text.includes(item.context)) member.text = member.text.replace(item.context, `${item.context}（补充：${detail}）`);
+      else member.text += `\n${item.context}（补充：${detail}）`;
+    });
   }
   state.clarifications[member.id] = member.text; state.assignments = {}; saveState(); renderResults(); showSection("results"); showToast("补充确认完成，劳动地图已更新。");
 }
@@ -364,10 +385,13 @@ function renderResults() {
   $("#packageMetric").innerHTML = `${currentAnalysis.shared.length}<small>件</small>`;
   const totalMental = currentAnalysis.analyses.reduce((sum, item) => sum + item.data.mental, 0) || 1;
   const totalVisible = currentAnalysis.analyses.reduce((sum, item) => sum + item.data.execution, 0) || 1;
-  const heavier = [...currentAnalysis.analyses].sort((a, b) => b.data.mental - a.data.mental)[0];
-  const mentalShare = Math.round(heavier.data.mental / totalMental * 100); const visibleShare = Math.round(heavier.data.execution / totalVisible * 100);
-  $("#headlineInsight").innerHTML = `${escapeHtml(heavier.member.name)}承担了 <b>${visibleShare}%</b> 的可见执行，同时承担了 <b>${mentalShare}%</b> 的计划、提醒与协调。`;
-  $("#headlineDetail").textContent = "投入估算综合计划协调、现场时长、重复次数和后续跟进。";
+  const totalEffort = currentAnalysis.analyses.reduce((sum, item) => sum + item.data.total, 0) || 1;
+  const highestTotal = [...currentAnalysis.analyses].sort((a, b) => b.data.total - a.data.total)[0];
+  const totalShare = Math.round(highestTotal.data.total / totalEffort * 100);
+  const mentalShare = Math.round(highestTotal.data.mental / totalMental * 100);
+  const visibleShare = Math.round(highestTotal.data.execution / totalVisible * 100);
+  $("#headlineInsight").innerHTML = `${escapeHtml(highestTotal.member.name)}的总投入最高，占本周家庭投入的 <b>${totalShare}%</b>。其中，可见执行占全家的 <b>${visibleShare}%</b>，计划、提醒与协调占 <b>${mentalShare}%</b>。`;
+  $("#headlineDetail").textContent = "此处按每位成员全部劳动点数之和排序；点数综合劳动方式、时长、周频次和持续投入。";
   activeDomain = currentAnalysis.domains[0] || "home";
   activeTopic = currentAnalysis.topics.find((topic) => topic.domain === activeDomain)?.id || "other";
   renderRawRecords(); renderDomainTabs(); renderIceberg(activeDomain); renderTopicCarousel(); renderComparison(activeTopic); renderBalanceSimulator();
