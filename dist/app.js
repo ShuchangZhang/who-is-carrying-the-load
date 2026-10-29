@@ -8,7 +8,7 @@ const CATEGORIES = {
   inventory: { name: "日用品库存", icon: "🧻", keywords: ["日用品", "库存", "快用完", "采购", "买菜", "购物", "超市", "纸巾", "洗衣液"], steps: ["留意消耗速度", "检查现有库存", "比较购买渠道", "列出清单", "完成购买", "核对遗漏", "分类归位", "预测下次补充"] },
   cleaning: { name: "清洁整理", icon: "🧹", keywords: ["打扫", "洗碗", "垃圾", "清洁", "保洁", "洗衣", "收拾", "整理", "拖地"], steps: ["发现需要清理", "安排清洁时间", "准备清洁用品", "完成清洁", "分类与归位", "处理垃圾", "检查遗漏", "维持日常秩序"] },
   bills: { name: "家庭账单", icon: "🧾", keywords: ["账单", "水电", "缴费", "报销", "预算", "房租", "物业", "保险", "费用"], steps: ["记住截止日期", "核对金额", "协调家庭预算", "完成缴费", "保存凭证", "检查扣款", "记录支出", "提醒下个周期"] },
-  repair: { name: "家庭维修", icon: "🔧", keywords: ["维修", "修好", "坏了", "水龙头", "灯泡", "师傅", "安装", "漏水", "家具"], steps: ["发现故障", "判断紧急程度", "查找解决办法", "购买配件", "联系维修人员", "现场维修", "清理现场", "检查是否复发"] },
+  repair: { name: "家庭维修", icon: "🔧", keywords: ["维修", "修好", "坏了", "水龙头", "灯泡", "师傅", "安装", "漏水", "家具", "粉刷", "粉刷匠", "油漆", "装修"], steps: ["发现故障", "判断紧急程度", "查找解决办法", "购买配件", "联系维修人员", "现场维修", "清理现场", "检查是否复发"] },
   transport: { name: "出行与车辆", icon: "🚗", keywords: ["开车", "接送", "加油", "车辆", "洗车", "通勤", "停车", "保养", "车"], steps: ["确认出发时间", "规划路线", "协调接送", "检查车辆状态", "准备随身物品", "现场执行", "处理停车与加油", "安排维护"] },
   children: { name: "孩子成长", icon: "🎒", keywords: ["孩子", "学校", "老师", "作业", "家长会", "兴趣班", "幼儿园", "辅导", "学习"], steps: ["留意孩子状态", "查看学校通知", "协调家庭时间", "准备材料", "提醒重要节点", "陪伴完成", "与老师沟通", "跟进后续变化"] },
   outings: { name: "家庭活动", icon: "⛺", keywords: ["周末", "出游", "旅行", "门票", "露营", "订票", "酒店", "天气", "行程"], steps: ["提出备选方案", "确认家人偏好", "查看天气", "比较预算", "完成预订", "准备随身物品", "规划路线", "安排返程"] },
@@ -17,11 +17,19 @@ const CATEGORIES = {
   other: { name: "其他家庭事务", icon: "🏠", keywords: [], steps: ["发现需要处理", "明确任务边界", "收集必要信息", "安排时间", "完成执行", "告知相关成员", "检查结果", "记录下次提醒"] }
 };
 
+const DOMAINS = {
+  daily: { name: "日常生活", icon: "🍲", categories: ["meals", "inventory", "cleaning"] },
+  care: { name: "照护与关系", icon: "🤲", categories: ["health", "children", "pets", "relationships"] },
+  home: { name: "家庭运营", icon: "🏠", categories: ["bills", "repair", "other"] },
+  mobility: { name: "出行与活动", icon: "🚗", categories: ["transport", "outings"] }
+};
+const CATEGORY_DOMAIN = Object.fromEntries(Object.entries(DOMAINS).flatMap(([domain, value]) => value.categories.map((category) => [category, domain])));
+
 const ACTIONS = {
   planning: { name: "计划准备", keywords: ["计划", "安排", "查", "选择", "决定", "比较", "预约", "准备", "规划", "订", "列", "找"] },
   reminder: { name: "持续提醒", keywords: ["记着", "记得", "提醒", "留意", "关注", "担心", "惦记"] },
   coordination: { name: "协调沟通", keywords: ["联系", "沟通", "协调", "确认", "请假", "商量", "通知"] },
-  execution: { name: "现场执行", keywords: ["做", "洗", "打扫", "开车", "陪", "修", "取", "买", "送", "接", "完成", "收拾", "倒", "搬", "交"] },
+  execution: { name: "现场执行", keywords: ["做", "洗", "打扫", "开车", "陪", "修", "取", "买", "送", "接", "完成", "收拾", "倒", "搬", "交", "遛", "盯", "监督", "值守"] },
   followup: { name: "后续跟进", keywords: ["跟进", "复诊", "记录", "观察", "核对", "检查", "复盘", "验收"] }
 };
 
@@ -33,9 +41,10 @@ const MEMBER_COLORS = ["a", "b", "c", "d", "e", "f"];
 
 let state = normalizeState(loadState()) || { family: null, currentMemberId: null, assignments: {}, demo: false };
 let currentAnalysis = null;
-let activeCategory = null;
+let activeDomain = null;
+let activeTopic = null;
 let pendingRemovalId = null;
-let draggedPackageId = null;
+let draggedContributionId = null;
 
 function loadState() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
@@ -70,23 +79,57 @@ function showSection(id) {
 function splitSentences(text) {
   return text.split(/[。！？!?；;，,、\n]+/).map((item) => item.trim()).filter((item) => item.length > 1);
 }
+function parseCount(value) {
+  if (/^\d+$/.test(value)) return Number(value);
+  const digits = { 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
+  if (value === "十") return 10;
+  if (value.includes("十")) {
+    const [before, after] = value.split("十");
+    return (before ? digits[before] : 1) * 10 + (after ? digits[after] : 0);
+  }
+  return digits[value] || 1;
+}
+function estimateEffort(sentence, actions) {
+  const weights = { planning: 2.2, reminder: 1.8, coordination: 2.4, execution: 3, followup: 2.2 };
+  let score = [...new Set(actions)].reduce((sum, action) => sum + (weights[action] || 1.5), 0);
+  const reasons = [];
+  if (/全天候|一整天|整天|全天/.test(sentence)) { score += 6; reasons.push("长时间在场"); }
+  else if (/半天/.test(sentence)) { score += 4; reasons.push("半天投入"); }
+  else if (/\d+\s*小时|[一二三四五六七八九十两]+\s*个?小时/.test(sentence)) { score += 3; reasons.push("明确时长"); }
+  const repeat = sentence.match(/(\d+|[一二三四五六七八九十两]+)\s*次/);
+  if (repeat) {
+    const count = parseCount(repeat[1]); score += Math.min(4, Math.max(0, count - 1)); reasons.push(`${count} 次重复`);
+  }
+  if (/盯|监督|值守|陪同|来回|搬运|清洁现场|照护/.test(sentence)) { score += 2; reasons.push("持续现场投入"); }
+  if (!reasons.length) {
+    if (/预约|联系|确认|安排|查|比较/.test(sentence)) reasons.push("计划与协调");
+    else if (actions.includes("execution")) reasons.push("实际执行");
+    else reasons.push("持续心智投入");
+  }
+  return { value: Math.max(1, Math.min(12, Math.round(score))), reason: reasons.slice(0, 2).join("、") };
+}
 function analyzeText(text, memberId) {
-  const sentences = splitSentences(text).map((sentence) => {
+  const sentences = splitSentences(text).map((sentence, index) => {
     const normalized = sentence.replace(/[了着过]/g, "");
     let categories = Object.entries(CATEGORIES).filter(([key, value]) => key !== "other" && (value.keywords.some((word) => normalized.includes(word)) || value.patterns?.some((pattern) => pattern.test(normalized)))).map(([key]) => key);
     if (!categories.length) categories = ["other"];
     let actions = Object.entries(ACTIONS).filter(([, value]) => value.keywords.some((word) => normalized.includes(word))).map(([key]) => key);
     if (!actions.length) actions = ["execution"];
-    return { text: sentence, categories, actions, memberId };
+    const fineCategory = categories[0];
+    return { id: `contrib-${memberId}-${index}`, text: sentence, categories, fineCategory, domain: CATEGORY_DOMAIN[fineCategory] || "home", actions, effort: estimateEffort(sentence, actions), memberId };
   });
   const categories = {};
   sentences.forEach((sentence) => sentence.categories.forEach((key) => {
     if (!categories[key]) categories[key] = { score: 0, mental: 0, execution: 0, sentences: [], actions: {} };
     const bucket = categories[key]; bucket.sentences.push(sentence.text);
+    const mentalActions = sentence.actions.filter((action) => action !== "execution").length;
+    const executionActions = sentence.actions.filter((action) => action === "execution").length;
+    const actionTotal = mentalActions + executionActions || 1;
+    bucket.score += sentence.effort.value;
+    bucket.mental += sentence.effort.value * mentalActions / actionTotal;
+    bucket.execution += sentence.effort.value * executionActions / actionTotal;
     sentence.actions.forEach((action) => {
       bucket.actions[action] = (bucket.actions[action] || 0) + 1;
-      const mental = action === "planning" || action === "reminder" || action === "coordination" || action === "followup";
-      bucket.score += mental ? 3 : 2; bucket.mental += mental ? 3 : 0; bucket.execution += mental ? 0 : 2;
     });
   }));
   const mental = Object.values(categories).reduce((sum, item) => sum + item.mental, 0);
@@ -249,111 +292,145 @@ async function copyInvite(kind = "link") {
 function buildCombinedAnalysis() {
   const members = state.family.members.filter((member) => member.status === "submitted");
   const analyses = members.map((member) => ({ member, data: analyzeText(member.text, member.id) }));
-  const categoryKeys = [...new Set(analyses.flatMap((item) => Object.keys(item.data.categories)))].sort((a, b) => analyses.reduce((sum, item) => sum + (item.data.categories[b]?.score || 0) - (item.data.categories[a]?.score || 0), 0));
-  const shared = categoryKeys.filter((key) => analyses.filter((item) => item.data.categories[key]).length >= 2);
-  const packages = categoryKeys.map((key) => {
-    const scores = analyses.map((item) => item.data.categories[key]?.score || 0); const ownerIndex = scores.indexOf(Math.max(...scores));
-    return { id: key, name: CATEGORIES[key].name, icon: CATEGORIES[key].icon, detail: CATEGORIES[key].steps.slice(0, 4).join(" · "), weight: Math.max(8, scores.reduce((sum, value) => sum + value, 0)), owner: state.assignments[key] || members[ownerIndex].id };
-  });
-  return { members, analyses, categoryKeys, shared, packages };
+  const contributions = analyses.flatMap(({ member, data }) => data.sentences.map((sentence) => ({ ...sentence, member })));
+  const categoryKeys = [...new Set(contributions.map((item) => item.fineCategory))];
+  const topics = categoryKeys.map((key) => ({
+    id: key,
+    name: CATEGORIES[key].name,
+    icon: CATEGORIES[key].icon,
+    domain: CATEGORY_DOMAIN[key] || "home",
+    contributions: contributions.filter((item) => item.fineCategory === key)
+  })).sort((a, b) => b.contributions.reduce((sum, item) => sum + item.effort.value, 0) - a.contributions.reduce((sum, item) => sum + item.effort.value, 0));
+  const domains = [...new Set(topics.map((topic) => topic.domain))];
+  const shared = topics.filter((topic) => new Set(topic.contributions.map((item) => item.memberId)).size >= 2);
+  return { members, analyses, contributions, topics, domains, shared };
 }
 
 function renderResults() {
   currentAnalysis = buildCombinedAnalysis();
   if (currentAnalysis.members.length < 2) return;
   $("#analysisFamilyName").textContent = `${state.family.name} · 本周共同视角`;
-  $("#sharedMetric").innerHTML = `${currentAnalysis.shared.length}<small>类</small>`;
-  $("#taskMetric").innerHTML = `${currentAnalysis.analyses.reduce((sum, item) => sum + item.data.sentences.length, 0)}<small>项</small>`;
-  $("#packageMetric").innerHTML = `${currentAnalysis.packages.length}<small>组</small>`;
+  $("#sharedMetric").innerHTML = `${currentAnalysis.domains.length}<small>个</small>`;
+  $("#taskMetric").innerHTML = `${currentAnalysis.contributions.length}<small>项</small>`;
+  $("#packageMetric").innerHTML = `${currentAnalysis.shared.length}<small>件</small>`;
   const totalMental = currentAnalysis.analyses.reduce((sum, item) => sum + item.data.mental, 0) || 1;
   const totalVisible = currentAnalysis.analyses.reduce((sum, item) => sum + item.data.execution, 0) || 1;
   const heavier = [...currentAnalysis.analyses].sort((a, b) => b.data.mental - a.data.mental)[0];
   const mentalShare = Math.round(heavier.data.mental / totalMental * 100); const visibleShare = Math.round(heavier.data.execution / totalVisible * 100);
   $("#headlineInsight").innerHTML = `${escapeHtml(heavier.member.name)}承担了 <b>${visibleShare}%</b> 的可见执行，同时承担了 <b>${mentalShare}%</b> 的计划、提醒与协调。`;
-  const unique = currentAnalysis.categoryKeys.filter((key) => !currentAnalysis.shared.includes(key));
-  $("#headlineDetail").textContent = unique.length ? `还没有形成共同视角的领域包括：${unique.slice(0, 3).map((key) => CATEGORIES[key].name).join("、")}。` : "成员记录高度重合，可以直接进入责任调整。";
-  activeCategory = currentAnalysis.shared[0] || currentAnalysis.categoryKeys[0] || "other";
-  renderRawRecords(); renderCategoryTabs(); renderIceberg(activeCategory); renderComparison(activeCategory); renderPackages();
+  $("#headlineDetail").textContent = "投入估算会同时考虑计划协调、现场时长、重复次数和后续跟进，不按任务数量简单计数。";
+  activeDomain = currentAnalysis.domains[0] || "home";
+  activeTopic = currentAnalysis.topics.find((topic) => topic.domain === activeDomain)?.id || "other";
+  renderRawRecords(); renderDomainTabs(); renderIceberg(activeDomain); renderTopicCarousel(); renderComparison(activeTopic); renderBalanceSimulator();
 }
 
 function renderRawRecords() {
   $("#rawRecordGrid").innerHTML = currentAnalysis.members.map((member) => `<article class="raw-record-card"><div class="raw-record-head"><span class="member-avatar avatar-${member.color}">${escapeHtml(member.initial)}</span><div><strong>${escapeHtml(member.name)}</strong><small>${member.id === state.family.ownerId ? "家庭管理员" : "家庭成员"}</small></div></div><p>${escapeHtml(member.text)}</p></article>`).join("");
 }
 
-function renderCategoryTabs() {
-  $("#categoryTabs").innerHTML = currentAnalysis.categoryKeys.map((key) => `<button class="${key === activeCategory ? "active" : ""}" data-category="${key}">${CATEGORIES[key].icon} ${CATEGORIES[key].name}</button>`).join("");
-  $$('[data-category]').forEach((button) => button.addEventListener("click", () => { activeCategory = button.dataset.category; renderCategoryTabs(); renderIceberg(activeCategory); renderComparison(activeCategory); }));
+function renderDomainTabs() {
+  $("#categoryTabs").innerHTML = currentAnalysis.domains.map((key) => `<button class="${key === activeDomain ? "active" : ""}" data-domain="${key}">${DOMAINS[key].icon} ${DOMAINS[key].name}</button>`).join("");
+  $$('[data-domain]').forEach((button) => button.addEventListener("click", () => {
+    activeDomain = button.dataset.domain;
+    activeTopic = currentAnalysis.topics.find((topic) => topic.domain === activeDomain)?.id;
+    renderDomainTabs(); renderIceberg(activeDomain); renderTopicCarousel(); renderComparison(activeTopic);
+  }));
 }
 function shorten(text, max = 23) { return text.length > max ? `${text.slice(0, max)}…` : text; }
-function renderIceberg(key) {
-  const visible = currentAnalysis.analyses.flatMap((item) => (item.data.categories[key]?.sentences || []).slice(0, 2).map((text) => ({ text, name: item.member.name })));
-  $("#visibleTaskList").innerHTML = visible.length ? visible.map((item) => `<span class="ice-item"><b>${escapeHtml(item.name)}</b> · ${escapeHtml(shorten(item.text, 18))}</span>`).join("") : `<span class="ice-item">没有识别到可见执行</span>`;
-  const actionsSeen = new Set(currentAnalysis.analyses.flatMap((item) => Object.keys(item.data.categories[key]?.actions || {})));
-  const steps = CATEGORIES[key].steps.filter((step, index) => actionsSeen.size > 2 || index < 6).slice(0, 7);
-  $("#hiddenTaskList").innerHTML = steps.map((step) => `<span class="ice-item">${step}</span>`).join("");
+function renderIceberg(domain) {
+  const items = currentAnalysis.contributions.filter((item) => item.domain === domain);
+  const visible = items.filter((item) => item.actions.includes("execution"));
+  const hidden = items.filter((item) => item.actions.some((action) => action !== "execution"));
+  const chip = (item) => `<span class="ice-item"><b>${escapeHtml(item.member.name)}</b> · ${escapeHtml(shorten(item.text, 17))}</span>`;
+  $("#visibleTaskList").innerHTML = visible.length ? visible.slice(0, 5).map(chip).join("") : `<span class="ice-item">本周没有明确写出现场执行</span>`;
+  $("#hiddenTaskList").innerHTML = hidden.length ? hidden.slice(0, 7).map(chip).join("") : `<span class="ice-item">本周没有明确写出计划、提醒或跟进</span>`;
 }
 
-function renderComparison(key) {
-  const mentions = currentAnalysis.analyses.filter((item) => item.data.categories[key]);
-  $("#compareCategory").textContent = CATEGORIES[key].name;
-  $("#compareBadge").textContent = mentions.length >= 2 ? `${mentions.length} 位成员提到，关注环节各有不同` : "只出现在一位成员的记录中";
-  $("#voiceList").innerHTML = currentAnalysis.analyses.map((item, index) => {
-    const info = item.data.categories[key];
-    return `<div class="voice-card voice-${index % 2 ? "b" : "a"}"><div class="mini-avatar avatar-${item.member.color}">${escapeHtml(item.member.initial)}</div><div class="voice-copy"><strong>${escapeHtml(item.member.name)}</strong><p>${info ? `“${escapeHtml(info.sentences[0])}。”` : "我的记录中没有提到这件事。"}</p></div></div>`;
+function renderTopicCarousel() {
+  const topics = currentAnalysis.topics.filter((topic) => topic.domain === activeDomain);
+  $("#topicCarousel").innerHTML = topics.map((topic) => {
+    const members = new Set(topic.contributions.map((item) => item.memberId)).size;
+    const effort = topic.contributions.reduce((sum, item) => sum + item.effort.value, 0);
+    return `<button class="topic-card ${topic.id === activeTopic ? "active" : ""}" data-topic="${topic.id}"><span>${topic.icon}</span><strong>${topic.name}</strong><small>${topic.contributions.length} 条贡献 · ${members} 人 · ${effort} 点</small></button>`;
   }).join("");
-  const chain = [{ name: "发现需求", action: "reminder" }, { name: "计划准备", action: "planning" }, { name: "现场执行", action: "execution" }, { name: "后续跟进", action: "followup" }];
-  const ownerFor = (action) => {
-    const counts = currentAnalysis.analyses.map((item) => ({ name: item.member.name, count: item.data.categories[key]?.actions[action] || 0 }));
-    const max = Math.max(...counts.map((item) => item.count)); if (!max) return "待确认";
-    const leaders = counts.filter((item) => item.count === max); return leaders.length > 1 ? "共同" : leaders[0].name;
-  };
-  $("#responsibilityChain").innerHTML = chain.map((item, index) => `<div class="chain-item"><span>${index + 1}</span><p>${item.name}</p><small>${ownerFor(item.action)}</small></div>${index < chain.length - 1 ? '<i class="chain-line"></i>' : ''}`).join("");
+  $$('[data-topic]').forEach((button) => button.addEventListener("click", () => { activeTopic = button.dataset.topic; renderTopicCarousel(); renderComparison(activeTopic); }));
 }
 
-function renderPackages() {
-  const members = currentAnalysis.members; const packages = currentAnalysis.packages.map((pkg) => ({ ...pkg, owner: state.assignments[pkg.id] || pkg.owner }));
+function renderComparison(topicId) {
+  const topic = currentAnalysis.topics.find((item) => item.id === topicId);
+  if (!topic) return;
+  const memberCount = new Set(topic.contributions.map((item) => item.memberId)).size;
+  const totalEffort = topic.contributions.reduce((sum, item) => sum + item.effort.value, 0);
+  $("#compareCategory").textContent = topic.name;
+  $("#compareBadge").textContent = `${memberCount} 位成员 · ${topic.contributions.length} 条具体贡献 · ${totalEffort} 点投入`;
+  $("#voiceList").innerHTML = currentAnalysis.members.map((member, index) => {
+    const items = topic.contributions.filter((item) => item.memberId === member.id);
+    const cards = items.length ? items.map((item) => `<div class="contribution-quote"><p>“${escapeHtml(item.text)}。”</p><div><span>${item.actions.map((action) => ACTIONS[action].name).join(" · ")}</span><strong>${item.effort.value} 点</strong><small>${item.effort.reason}</small></div></div>`).join("") : `<p class="no-mention">这位成员的记录中没有提到这一具体事项。</p>`;
+    return `<div class="voice-card voice-${index % 2 ? "b" : "a"}"><div class="mini-avatar avatar-${member.color}">${escapeHtml(member.initial)}</div><div class="voice-copy"><strong>${escapeHtml(member.name)}</strong>${cards}</div></div>`;
+  }).join("");
+  $("#contributionSummary").innerHTML = `<strong>这里比较的是具体贡献，不是把整件事判给一个人。</strong><p>分值综合自然语言里的现场时长、重复次数、计划协调和持续跟进。例如“预约粉刷匠”会被识别为计划协调；“全天在家盯着粉刷匠”会因长时间在场获得更高投入估算。</p>`;
+}
+
+function balanceFor(assignments = {}) {
+  const totals = Object.fromEntries(currentAnalysis.members.map((member) => [member.id, 0]));
+  currentAnalysis.contributions.forEach((item) => { const owner = assignments[item.id] || item.memberId; totals[owner] = (totals[owner] || 0) + item.effort.value; });
+  const total = Object.values(totals).reduce((sum, value) => sum + value, 0) || 1;
+  const ideal = 100 / currentAnalysis.members.length;
+  const shares = Object.fromEntries(Object.entries(totals).map(([id, value]) => [id, value / total * 100]));
+  const imbalance = Object.values(shares).reduce((sum, share) => sum + Math.abs(share - ideal), 0) / 2;
+  return { totals, shares, score: Math.max(0, Math.round(100 - imbalance)) };
+}
+
+function renderBalanceSimulator() {
+  const members = currentAnalysis.members; const baseline = balanceFor({}); const simulated = balanceFor(state.assignments);
+  const changed = currentAnalysis.contributions.filter((item) => state.assignments[item.id] && state.assignments[item.id] !== item.memberId).length;
+  $("#currentBalanceScore").textContent = `${baseline.score}%`;
+  $("#simulatedBalanceScore").textContent = `${simulated.score}%`;
+  const delta = simulated.score - baseline.score;
+  $("#balanceDelta").textContent = delta === 0 ? (changed ? "成员占比已变化，整体平衡度持平" : "尚未调整") : `${delta > 0 ? "+" : ""}${delta} 个百分点`;
+  $("#balanceDelta").className = delta > 0 ? "positive" : delta < 0 ? "negative" : "";
+  $("#burdenBars").innerHTML = members.map((member) => `<div class="burden-row"><span><i class="avatar-${member.color}"></i>${escapeHtml(member.name)}</span><div><b style="width:${baseline.shares[member.id]}%"></b><em style="width:${simulated.shares[member.id]}%"></em></div><small>${Math.round(baseline.shares[member.id])}% → ${Math.round(simulated.shares[member.id])}%</small></div>`).join("");
   const cardFor = (item) => {
-    const options = [`<option value="deferred"${item.owner === "deferred" ? " selected" : ""}>暂不协商</option>`, ...members.map((member) => `<option value="${member.id}"${item.owner === member.id ? " selected" : ""}>${escapeHtml(member.name)}</option>`)].join("");
-    return `<article class="package-card" data-package-card="${item.id}"><span class="package-handle" draggable="true" data-package-drag="${item.id}" title="拖动责任包" aria-label="拖动${item.name}">⠿</span><span class="package-icon">${item.icon}</span><div class="package-copy"><strong>${item.name}</strong><small>${item.detail}</small><label class="owner-picker"><span>主责人</span><select data-package-owner="${item.id}" aria-label="${item.name}的主责人">${options}</select></label></div></article>`;
+    const owner = state.assignments[item.id] || item.memberId;
+    const options = members.map((member) => `<option value="${member.id}"${owner === member.id ? " selected" : ""}>${escapeHtml(member.name)}</option>`).join("");
+    const original = owner !== item.memberId ? `<small class="original-owner">原记录：${escapeHtml(item.member.name)}</small>` : "";
+    return `<article class="contribution-card" data-contribution-card="${item.id}"><span class="package-handle" draggable="true" data-contribution-drag="${item.id}" title="拖动这条具体劳动">⠿</span><div class="contribution-card-copy"><span>${CATEGORIES[item.fineCategory].icon} ${CATEGORIES[item.fineCategory].name}</span><strong>${escapeHtml(item.text)}</strong><small>${item.effort.value} 点 · ${item.effort.reason}</small>${original}<label class="owner-picker"><span>假设改由</span><select data-contribution-owner="${item.id}">${options}</select></label></div></article>`;
   };
-  const memberColumns = members.map((member) => {
-    const memberPackages = packages.filter((item) => item.owner === member.id);
-    const cards = memberPackages.map(cardFor).join("") || `<div class="drop-empty">把仍需持续主责的卡片拖到这里</div>`;
-    return `<div class="load-column" data-drop-member="${member.id}"><div class="column-head"><div class="member-avatar avatar-${member.color}">${escapeHtml(member.initial)}</div><div><span>${escapeHtml(member.name)}</span><strong>${memberPackages.length} 个责任包</strong></div></div><div class="package-list">${cards}</div></div>`;
+  $("#balanceColumns").innerHTML = members.map((member) => {
+    const items = currentAnalysis.contributions.filter((item) => (state.assignments[item.id] || item.memberId) === member.id);
+    return `<div class="load-column" data-drop-member="${member.id}"><div class="column-head"><div class="member-avatar avatar-${member.color}">${escapeHtml(member.initial)}</div><div><span>${escapeHtml(member.name)}</span><strong>${simulated.totals[member.id]} 点 · ${Math.round(simulated.shares[member.id])}%</strong></div></div><div class="package-list">${items.map(cardFor).join("") || `<div class="drop-empty">可以把一条具体劳动拖到这里，模拟由此成员承担。</div>`}</div></div>`;
   }).join("");
-  const deferred = packages.filter((item) => item.owner === "deferred");
-  const deferredColumn = `<div class="load-column deferred-column" data-drop-member="deferred"><div class="column-head"><div class="member-avatar deferred-avatar">—</div><div><span>暂不协商</span><strong>${deferred.length} 个事项</strong></div></div><p class="column-note">一次性、已结束或暂时不确定是否持续的事项放这里。</p><div class="package-list">${deferred.map(cardFor).join("") || `<div class="drop-empty">把下周不一定继续的事项拖到这里</div>`}</div></div>`;
-  $("#balanceColumns").innerHTML = memberColumns + deferredColumn;
-  $$('[data-package-drag]').forEach((handle) => {
-    handle.addEventListener("dragstart", (event) => { draggedPackageId = handle.dataset.packageDrag; const card = handle.closest(".package-card"); card.classList.add("dragging"); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", draggedPackageId); event.dataTransfer.setDragImage(card, 24, 24); });
-    handle.addEventListener("dragend", () => { draggedPackageId = null; $$(".package-card").forEach((card) => card.classList.remove("dragging")); $$("[data-drop-member]").forEach((column) => column.classList.remove("drop-target")); });
+  $$('[data-contribution-drag]').forEach((handle) => {
+    handle.addEventListener("dragstart", (event) => { draggedContributionId = handle.dataset.contributionDrag; const card = handle.closest(".contribution-card"); card.classList.add("dragging"); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", draggedContributionId); event.dataTransfer.setDragImage(card, 24, 24); });
+    handle.addEventListener("dragend", () => { draggedContributionId = null; $$(".contribution-card").forEach((card) => card.classList.remove("dragging")); $$("[data-drop-member]").forEach((column) => column.classList.remove("drop-target")); });
   });
   $$('[data-drop-member]').forEach((column) => {
     column.addEventListener("dragover", (event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; column.classList.add("drop-target"); });
     column.addEventListener("dragleave", (event) => { if (!column.contains(event.relatedTarget)) column.classList.remove("drop-target"); });
-    column.addEventListener("drop", (event) => { event.preventDefault(); const id = event.dataTransfer.getData("text/plain") || draggedPackageId; column.classList.remove("drop-target"); if (id) assignPackage(id, column.dataset.dropMember); });
+    column.addEventListener("drop", (event) => { event.preventDefault(); const id = event.dataTransfer.getData("text/plain") || draggedContributionId; column.classList.remove("drop-target"); if (id) assignContribution(id, column.dataset.dropMember); });
   });
-  $$('[data-package-owner]').forEach((select) => select.addEventListener("change", () => assignPackage(select.dataset.packageOwner, select.value)));
-  const counts = members.map((member) => ({ member, count: packages.filter((item) => item.owner === member.id).length })).sort((a, b) => b.count - a.count);
-  const covered = counts.filter((item) => item.count > 0).length; $("#responsibilityCoverage").textContent = covered; $("#responsibilityTotal").textContent = `/ ${members.length}`;
-  const deferredCopy = deferred.length ? `另有 ${deferred.length} 个事项暂不纳入持续责任。` : "目前没有事项被标记为暂不协商。";
-  if (!counts[0]?.count) $("#actionSummary").innerHTML = `<strong>还没有确认持续责任。</strong>先把需要长期主责的卡片拖到对应成员名下。`;
-  else $("#actionSummary").innerHTML = `<strong>${escapeHtml(counts[0].member.name)}目前主责 ${counts[0].count} 个持续责任领域。</strong>${deferredCopy} 这只是协商提示，不是对个人投入的评价。`;
+  $$('[data-contribution-owner]').forEach((select) => select.addEventListener("change", () => assignContribution(select.dataset.contributionOwner, select.value)));
+  $("#actionSummary").innerHTML = changed ? `<strong>当前模拟移动了 ${changed} 条具体劳动，平衡度从 ${baseline.score}% 变为 ${simulated.score}%。</strong>这只是讨论“如果换一种承担方式会怎样”，不会改写任何人的原始记录。` : `<strong>当前平衡度为 ${baseline.score}%。</strong>拖动任意一条具体劳动，就能看到假设由另一位成员承担后，每个人的负担占比和平衡度如何变化。`;
 }
-function assignPackage(id, ownerId) {
-  const pkg = currentAnalysis.packages.find((item) => item.id === id); if (!pkg) return;
-  state.assignments[id] = ownerId; saveState(); renderPackages();
-  const label = ownerId === "deferred" ? "暂不协商" : currentAnalysis.members.find((member) => member.id === ownerId)?.name;
-  showToast(`“${pkg.name}”已调整为：${label || "待确认"}。`);
+function assignContribution(id, ownerId) {
+  const item = currentAnalysis.contributions.find((contribution) => contribution.id === id); if (!item) return;
+  if (ownerId === item.memberId) delete state.assignments[id]; else state.assignments[id] = ownerId;
+  saveState(); renderBalanceSimulator();
+  const label = currentAnalysis.members.find((member) => member.id === ownerId)?.name;
+  showToast(`已模拟将“${shorten(item.text, 12)}”改由${label || "其他成员"}承担。`);
+}
+function resetSimulation() {
+  currentAnalysis.contributions.forEach((item) => delete state.assignments[item.id]); saveState(); renderBalanceSimulator(); showToast("已恢复原始承担情况。");
 }
 
 function exportPlan() {
-  if (!currentAnalysis) return; const groups = Object.fromEntries([...currentAnalysis.members.map((member) => [member.id, []]), ["deferred", []]]);
-  currentAnalysis.packages.forEach((pkg) => { const owner = state.assignments[pkg.id] || pkg.owner; (groups[owner] ||= []).push(`- ${pkg.name}：${pkg.detail.replaceAll(" · ", "、")}`); });
-  const sections = currentAnalysis.members.map((member) => `${member.name}持续主责：\n${groups[member.id].join("\n") || "- 暂无"}`).join("\n\n");
-  const deferred = `暂不纳入持续责任：\n${groups.deferred.join("\n") || "- 暂无"}`;
-  const content = `《${state.family.name}持续责任协商记录》\n\n本记录依据本周发生的事项发现可能长期存在的责任，不代表下周必须重复同样的任务。我们协商的是谁负责发现、计划、执行协调和后续跟进。\n\n${sections}\n\n${deferred}\n\n这份记录用于帮助家庭减少遗漏和重复沟通，不用于评价任何人的价值。`;
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${state.family.name}-持续责任协商记录.txt`; link.click(); URL.revokeObjectURL(url); showToast("责任协商记录已导出。");
+  if (!currentAnalysis) return;
+  const baseline = balanceFor({}); const simulated = balanceFor(state.assignments);
+  const groups = Object.fromEntries(currentAnalysis.members.map((member) => [member.id, []]));
+  currentAnalysis.contributions.forEach((item) => { const owner = state.assignments[item.id] || item.memberId; groups[owner].push(`- ${CATEGORIES[item.fineCategory].name}：${item.text}（${item.effort.value} 点，${item.effort.reason}）`); });
+  const sections = currentAnalysis.members.map((member) => `${member.name}在模拟方案中承担：\n${groups[member.id].join("\n") || "- 暂无"}`).join("\n\n");
+  const content = `《${state.family.name}劳动平衡模拟记录》\n\n当前平衡度：${baseline.score}%\n模拟平衡度：${simulated.score}%\n\n${sections}\n\n分值依据记录中的计划协调、现场时长、重复次数和后续跟进进行可解释估算，只用于帮助家庭讨论，不用于评价个人价值。`;
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${state.family.name}-劳动平衡模拟记录.txt`; link.click(); URL.revokeObjectURL(url); showToast("劳动平衡模拟记录已导出。");
 }
 
 $("#createFamilyButton").addEventListener("click", () => openOnboarding("create"));
@@ -381,6 +458,9 @@ $$('[data-prompt]').forEach((button) => button.addEventListener("click", () => {
 $("#submitRecordButton").addEventListener("click", submitRecord); $("#simulateFamilyButton").addEventListener("click", simulateFamilySubmission);
 $("#copyCodeButton").addEventListener("click", () => copyInvite("code")); $("#copyLinkButton").addEventListener("click", () => copyInvite("link")); $("#waitingCopyLink").addEventListener("click", () => copyInvite("link"));
 $("#viewResultsButton").addEventListener("click", () => { renderResults(); showSection("results"); }); $("#resultsBack").addEventListener("click", () => { renderFamily(); showSection("familySpace"); });
+$("#topicPrev").addEventListener("click", () => $("#topicCarousel").scrollBy({ left: -280, behavior: "smooth" }));
+$("#topicNext").addEventListener("click", () => $("#topicCarousel").scrollBy({ left: 280, behavior: "smooth" }));
+$("#resetSimulationButton").addEventListener("click", resetSimulation);
 $("#exportButton").addEventListener("click", exportPlan);
 $$('[data-nav]').forEach((button) => button.addEventListener("click", () => {
   const target = button.dataset.nav;
