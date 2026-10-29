@@ -200,7 +200,9 @@ function renderFamily() {
   $("#familyDisplayName").textContent = state.family.name; $("#inviteCode").textContent = state.family.code;
   const members = state.family.members; const submitted = members.filter((member) => member.status === "submitted").length;
   $("#memberCount").textContent = `${members.length} / 6`; $("#submittedCount").textContent = submitted;
-  $("#progressRing").querySelector("span").textContent = `/ ${Math.max(2, members.length)}`;
+  $("#memberTotal").textContent = Math.max(2, members.length);
+  $("#submissionProgress").style.width = `${Math.round(submitted / Math.max(2, members.length) * 100)}%`;
+  $("#submissionLegend").innerHTML = members.map((member) => `<span class="${member.status === "submitted" ? "done" : "waiting"}"><i></i>${escapeHtml(member.name)} · ${member.status === "submitted" ? "已提交" : "待提交"}</span>`).join("");
   const admin = isCurrentAdmin();
   const rows = members.map((member) => {
     const role = member.id === state.family.ownerId ? `<span class="role-badge">管理员</span>` : "";
@@ -339,8 +341,9 @@ function renderDomainTabs() {
 function shorten(text, max = 23) { return text.length > max ? `${text.slice(0, max)}…` : text; }
 function renderIceberg(domain) {
   const items = currentAnalysis.contributions.filter((item) => item.domain === domain);
-  const visible = items.filter((item) => item.actions.includes("execution"));
-  const hidden = items.filter((item) => item.actions.some((action) => action !== "execution"));
+  const containsMentalWork = (item) => item.actions.some((action) => action !== "execution");
+  const visible = items.filter((item) => item.actions.includes("execution") && !containsMentalWork(item));
+  const hidden = items.filter(containsMentalWork);
   const chip = (item) => `<span class="ice-item"><b>${escapeHtml(item.member.name)}</b> · ${escapeHtml(shorten(item.text, 17))}</span>`;
   $("#visibleTaskList").innerHTML = visible.length ? visible.slice(0, 5).map(chip).join("") : `<span class="ice-item">本周没有明确写出现场执行</span>`;
   $("#hiddenTaskList").innerHTML = hidden.length ? hidden.slice(0, 7).map(chip).join("") : `<span class="ice-item">本周没有明确写出计划、提醒或跟进</span>`;
@@ -394,7 +397,7 @@ function renderBalanceSimulator() {
     const owner = state.assignments[item.id] || item.memberId;
     const options = members.map((member) => `<option value="${member.id}"${owner === member.id ? " selected" : ""}>${escapeHtml(member.name)}</option>`).join("");
     const original = owner !== item.memberId ? `<small class="original-owner">原记录：${escapeHtml(item.member.name)}</small>` : "";
-    return `<article class="contribution-card" data-contribution-card="${item.id}"><span class="package-handle" draggable="true" data-contribution-drag="${item.id}" title="拖动这条具体劳动">⠿</span><div class="contribution-card-copy"><span>${CATEGORIES[item.fineCategory].icon} ${CATEGORIES[item.fineCategory].name}</span><strong>${escapeHtml(item.text)}</strong><small>${item.effort.value} 点 · ${item.effort.reason}</small>${original}<label class="owner-picker"><span>假设改由</span><select data-contribution-owner="${item.id}">${options}</select></label></div></article>`;
+    return `<article class="contribution-card" data-contribution-card="${item.id}"><span class="package-handle" draggable="true" data-contribution-drag="${item.id}" title="拖动这条具体劳动">⠿</span><div class="contribution-main"><span>${CATEGORIES[item.fineCategory].icon} ${CATEGORIES[item.fineCategory].name}</span><strong>${escapeHtml(item.text)}</strong><small>${item.effort.reason}</small>${original}</div><b class="effort-score">${item.effort.value}<small>点</small></b><label class="owner-picker contribution-owner"><span>模拟改由</span><select data-contribution-owner="${item.id}">${options}</select></label></article>`;
   };
   $("#balanceColumns").innerHTML = members.map((member) => {
     const items = currentAnalysis.contributions.filter((item) => (state.assignments[item.id] || item.memberId) === member.id);
@@ -421,16 +424,6 @@ function assignContribution(id, ownerId) {
 }
 function resetSimulation() {
   currentAnalysis.contributions.forEach((item) => delete state.assignments[item.id]); saveState(); renderBalanceSimulator(); showToast("已恢复原始承担情况。");
-}
-
-function exportPlan() {
-  if (!currentAnalysis) return;
-  const baseline = balanceFor({}); const simulated = balanceFor(state.assignments);
-  const groups = Object.fromEntries(currentAnalysis.members.map((member) => [member.id, []]));
-  currentAnalysis.contributions.forEach((item) => { const owner = state.assignments[item.id] || item.memberId; groups[owner].push(`- ${CATEGORIES[item.fineCategory].name}：${item.text}（${item.effort.value} 点，${item.effort.reason}）`); });
-  const sections = currentAnalysis.members.map((member) => `${member.name}在模拟方案中承担：\n${groups[member.id].join("\n") || "- 暂无"}`).join("\n\n");
-  const content = `《${state.family.name}劳动平衡模拟记录》\n\n当前平衡度：${baseline.score}%\n模拟平衡度：${simulated.score}%\n\n${sections}\n\n分值依据记录中的计划协调、现场时长、重复次数和后续跟进进行可解释估算，只用于帮助家庭讨论，不用于评价个人价值。`;
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${state.family.name}-劳动平衡模拟记录.txt`; link.click(); URL.revokeObjectURL(url); showToast("劳动平衡模拟记录已导出。");
 }
 
 $("#createFamilyButton").addEventListener("click", () => openOnboarding("create"));
@@ -461,7 +454,6 @@ $("#viewResultsButton").addEventListener("click", () => { renderResults(); showS
 $("#topicPrev").addEventListener("click", () => $("#topicCarousel").scrollBy({ left: -280, behavior: "smooth" }));
 $("#topicNext").addEventListener("click", () => $("#topicCarousel").scrollBy({ left: 280, behavior: "smooth" }));
 $("#resetSimulationButton").addEventListener("click", resetSimulation);
-$("#exportButton").addEventListener("click", exportPlan);
 $$('[data-nav]').forEach((button) => button.addEventListener("click", () => {
   const target = button.dataset.nav;
   if (target === "join") { openOnboarding("join"); return; }

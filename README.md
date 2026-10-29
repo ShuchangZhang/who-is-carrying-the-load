@@ -18,7 +18,6 @@
 - **可横向浏览的多人视角。** 所有成员提交后，系统展示完整原始描述；每个大领域下可左右浏览多件具体工作，并逐条对照成员原话和投入估算。
 - **管理员与多人测试。** 家庭管理员可以添加测试成员、转让管理员和移除普通成员；演示模式可以切换成员视角，方便在一个浏览器中测试三至六人家庭。
 - **劳动平衡模拟。** 系统按计划协调、现场时长、重复次数和后续跟进估算劳动负担。用户拖动的是一条具体贡献，而不是把整件家庭事务判给一个人；每次调整都会即时重算成员占比和整体平衡度。
-- **模拟记录导出。** 调整完成后可以导出带投入分值和承担人的家庭劳动平衡模拟记录。
 
 ### 快速开始
 
@@ -78,7 +77,6 @@ python3 -m http.server 4173 --directory dist
 - **Swipeable multi-member comparison.** Once everyone submits, the product shows every complete original description and lets users browse multiple concrete tasks inside each domain while comparing member wording and estimated effort.
 - **Administrator and multi-member testing.** The household administrator can add test members, transfer the administrator role, and remove ordinary members. Demo-mode perspective switching supports testing households of three to six people in one browser.
 - **Labor-balance simulator.** Effort weights account for planning, coordination, time on site, repetition, and follow-up. Users move one concrete contribution—not an entire household responsibility—and immediately see each member's share and the overall balance score change.
-- **Exportable simulation record.** Download a plain-text record containing the simulated assignees, contribution wording, and effort estimates.
 
 ### Run locally
 

@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#173f3a" />
     <meta name="description" content="家庭成员从各自的手机加入家庭，分别记录自己的劳动与心智负担，再共同看见完整责任。" />
     <title>谁在操心｜家庭隐形劳动地图</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20261029-5" />
   </head>
   <body>
     <div class="page-shell">
@@ -91,7 +91,7 @@
             </article>
             <aside class="family-side-card">
               <p class="eyebrow">本周进度</p>
-              <div class="progress-ring" id="progressRing"><strong id="submittedCount">0</strong><span>/ 2</span><small>已提交</small></div>
+              <div class="submission-summary"><div class="submission-count"><strong id="submittedCount">0</strong><span>/ <b id="memberTotal">2</b> 位成员已提交</span></div><div class="submission-track"><i id="submissionProgress"></i></div><div class="submission-legend" id="submissionLegend"></div></div>
               <p id="progressCopy">你可以先完成自己的记录，系统会在其他成员提交后通知你。</p>
               <button class="button button-primary wide" id="recordMineButton">记录我的一周</button>
               <button class="button button-quiet wide" id="viewResultsButton" disabled>等待其他成员</button>
@@ -140,6 +140,7 @@
             <article class="panel iceberg-panel">
               <div class="panel-heading"><div><span class="panel-number">01</span><h3>劳动冰山</h3></div><p>这里不负责细分任务，而是回答一个问题：一个家庭领域里，哪些是看得见的执行，哪些是容易被忽略的计划、提醒与跟进。</p></div>
               <div class="iceberg-stage"><img src="assets/iceberg-gouache.png" alt="淡雅水彩风格冰山，水下部分远大于水上部分" /><span class="ice-label label-visible">看得见的执行</span><span class="ice-label label-hidden">看不见的计划、提醒与跟进</span><div class="ice-visible" id="visibleTaskList"></div><div class="ice-hidden" id="hiddenTaskList"></div></div>
+              <div class="iceberg-rule"><strong>放在水面上还是水面下，依据是什么？</strong><p><b>水面上</b>只放明确完成的现场或实物动作，例如“洗了碗”“给父母打了电话”。<b>水面下</b>放计划、查找、预约、记住、提醒、协调和跟进，例如“预约钢琴调音”“记着给父母打电话”。一句话同时包含两类劳动时，优先放在水面下，避免心智劳动再次被忽略。</p></div>
               <div class="category-tabs" id="categoryTabs"></div>
             </article>
             <article class="panel compare-panel">
@@ -160,7 +161,7 @@
             <div class="burden-bars" id="burdenBars"></div>
             <p class="rebalance-help">每张卡片是一条具体劳动，不是要求某个人独自负责整件家庭事务。桌面端可拖到另一位成员名下；手机端可在卡片里选择成员。系统会立即重算每个人的负担占比和平衡度。</p>
             <div class="balance-layout balance-multi" id="balanceColumns"></div>
-            <div class="action-bar"><div><span class="spark">✦</span><p id="actionSummary">拖动任意一条具体劳动，查看假设变化。</p></div><button class="button button-primary" id="exportButton">导出平衡模拟记录</button></div>
+            <div class="action-bar"><div><span class="spark">✦</span><p id="actionSummary">拖动任意一条具体劳动，查看假设变化。</p></div></div>
           </section>
         </section>
       </main>
@@ -186,6 +187,6 @@
       </div>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="app.js?v=20261029-4"></script>
+    <script src="app.js?v=20261029-5"></script>
   </body>
 </html>
