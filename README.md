@@ -8,17 +8,17 @@
 
 ## 中文介绍
 
-“谁在操心”是一款家庭隐形劳动可视化概念产品。家庭成员通过邀请码或邀请链接加入同一个家庭空间，在各自的设备上独立记录自己一周承担的事情。所有成员提交后，系统会合并不同视角，识别劳动类型、认知差异和完整责任链，并帮助家庭重新分配整组责任，而不是只转交最后一个执行步骤。
+“谁在操心”是一款家庭隐形劳动可视化概念产品。家庭成员通过邀请码或邀请链接加入同一个家庭空间，在各自的设备上独立记录自己一周承担的事情。所有成员提交后，系统会合并不同视角，识别每条具体贡献、投入强度和认知差异，并允许家庭模拟某项具体劳动换人承担后整体平衡度的变化。
 
 ### 核心功能
 
 - **独立成员入口。** 用户可以创建家庭空间并生成邀请码或邀请链接，受邀成员只进入自己的记录页面，也可以随时加入其他家庭或离开当前家庭。
-- **可接 AI 的本地文本分析。** 当前纯前端版由中文规则引擎识别家庭领域和劳动类型；接口设计允许正式版在服务端替换为大模型结构化语义分析，同时保留离线回退。
-- **动态劳动冰山。** 用户输入会真实改变水面上的可见执行，以及水面下的计划、提醒和持续责任。
-- **多人原文与视角对照。** 所有成员提交后，系统展示每个人的完整原始描述，并在同一家庭领域中引用对应语句进行对照。
+- **可解释的本地语义分析。** 当前纯前端版由中文语义规则识别家庭领域、行动类型、时长和重复次数，并为每条贡献给出投入分值与原因；正式版可在服务端替换为大模型结构化分析，同时保留离线回退。
+- **收敛后的动态劳动冰山。** 结果只使用“日常生活、照护与关系、家庭运营、出行与活动”四个大领域，直观对照水面上的可见执行与水面下的计划、提醒和跟进。
+- **可横向浏览的多人视角。** 所有成员提交后，系统展示完整原始描述；每个大领域下可左右浏览多件具体工作，并逐条对照成员原话和投入估算。
 - **管理员与多人测试。** 家庭管理员可以添加测试成员、转让管理员和移除普通成员；演示模式可以切换成员视角，方便在一个浏览器中测试三至六人家庭。
-- **持续责任协商。** 系统用本周记录发现可能长期反复出现的责任领域，但不把本周任务机械复制到下周。用户可以拖拽责任包确认主责人，或把一次性事项放入“暂不协商”。
-- **分工约定导出。** 调整完成后可以导出下一周的家庭分工文本。
+- **劳动平衡模拟。** 系统按计划协调、现场时长、重复次数和后续跟进估算劳动负担。用户拖动的是一条具体贡献，而不是把整件家庭事务判给一个人；每次调整都会即时重算成员占比和整体平衡度。
+- **模拟记录导出。** 调整完成后可以导出带投入分值和承担人的家庭劳动平衡模拟记录。
 
 ### 快速开始
 
@@ -54,7 +54,7 @@ python3 -m http.server 4173 --directory dist
 
 当前版本完全运行在浏览器中，用户记录存储于 `localStorage`，不会上传到服务器。自由文本分析由本地规则引擎完成，不依赖外部 AI API，因此可以作为纯前端作品迁移到 REDcowork 等平台。
 
-当前分析方式不是预先保存了一份“工作清单”，而是使用家庭领域、行为类型和责任步骤三组可扩展定义，对自然语言片段进行本地归类。未命中的片段进入“其他家庭事务”。真正的大模型版本应由服务端调用模型，并用结构化输出返回任务、领域、行动阶段和置信度；API 密钥必须只保存在服务端。这样可以在不改动前端劳动地图的情况下替换分析引擎，同时保留本地规则作为离线和失败回退。
+当前分析方式不是预先保存了一份“工作清单”，而是使用家庭领域、行为类型、时间强度和重复频率等可扩展定义，对自然语言片段进行本地归类和加权。未命中的片段进入“其他家庭事务”。例如，“预约粉刷匠上门”会被识别为计划协调，而“全天候在家盯着粉刷匠作业”会因长时间现场投入得到更高权重。真正的大模型版本应由服务端调用模型，并用结构化输出返回具体贡献、领域、行动类型、投入因子和置信度；API 密钥必须只保存在服务端。
 
 邀请码、邀请链接和独立成员页面已经包含完整的产品交互，但当前版本没有后端数据库，因此不同手机之间不会真正实时同步数据。正式产品需要增加身份认证、家庭成员关系、云端存储和实时同步服务。
 
@@ -68,17 +68,17 @@ python3 -m http.server 4173 --directory dist
 
 ## English
 
-**Who's Carrying the Load?** is a concept product for visualizing invisible household labor. Family members join a shared household through an invite code or link and independently describe what they handled during the week on their own devices. Once everyone submits, the app combines their perspectives, identifies labor categories and responsibility gaps, and helps the household reassign complete responsibility bundles rather than isolated final tasks.
+**Who's Carrying the Load?** is a concept product for visualizing invisible household labor. Family members join a shared household through an invite code or link and independently describe what they handled during the week on their own devices. Once everyone submits, the app identifies concrete contributions, estimates effort, compares perspectives, and simulates how the household balance would change if a specific contribution moved to another member.
 
 ### Key features
 
 - **Independent member entry.** Create a household, generate an invite code or link, give every member a private input flow, and let users join another household or leave the current one at any time.
-- **AI-ready local text analysis.** The frontend-only build uses a Chinese rules engine today, while the analysis boundary is designed to be replaced by server-side structured model output with a local fallback.
-- **Dynamic labor iceberg.** User input directly changes the visible tasks above water and the mental load shown below the surface.
-- **Multi-member source review.** Once everyone submits, the product shows every member's complete original description and quotes the relevant wording for each household domain.
+- **Explainable local semantic analysis.** The frontend-only build identifies household domains, action types, duration, and repetition, then shows an effort score and reason for every contribution. The analysis boundary can later be replaced by server-side structured model output with a local fallback.
+- **Focused labor iceberg.** Results are consolidated into four umbrella domains and contrast visible execution above water with planning, reminders, coordination, and follow-up below the surface.
+- **Swipeable multi-member comparison.** Once everyone submits, the product shows every complete original description and lets users browse multiple concrete tasks inside each domain while comparing member wording and estimated effort.
 - **Administrator and multi-member testing.** The household administrator can add test members, transfer the administrator role, and remove ordinary members. Demo-mode perspective switching supports testing households of three to six people in one browser.
-- **Ongoing responsibility negotiation.** This week's entries reveal potentially recurring responsibility areas without copying the same tasks into next week. Drag responsibility bundles between members or defer one-off items from the discussion.
-- **Exportable weekly agreement.** Download a plain-text household responsibility plan after reaching an agreement.
+- **Labor-balance simulator.** Effort weights account for planning, coordination, time on site, repetition, and follow-up. Users move one concrete contribution—not an entire household responsibility—and immediately see each member's share and the overall balance score change.
+- **Exportable simulation record.** Download a plain-text record containing the simulated assignees, contribution wording, and effort estimates.
 
 ### Run locally
 
@@ -94,7 +94,7 @@ Then open `http://localhost:4173`.
 
 The current version runs entirely in the browser. Household records are stored in `localStorage` and are never uploaded. Text analysis is performed by a local rules engine with no external AI API, which keeps the prototype portable to frontend-only platforms.
 
-The analyzer is not a database of predefined chores. It uses extensible household-domain, action-type, and responsibility-step definitions to classify language fragments, with unmatched fragments falling back to “Other household work.” A production AI analyzer should run behind a server endpoint, return schema-constrained tasks and responsibility stages, and keep its API key off the client. The existing local engine then remains available as an offline and failure fallback.
+The analyzer is not a database of predefined chores. It uses extensible household-domain, action-type, duration, and repetition signals to classify and weight language fragments, with unmatched fragments falling back to “Other household work.” A production AI analyzer should run behind a server endpoint, return schema-constrained contributions, effort factors, and confidence values, and keep its API key off the client. The existing local engine then remains available as an offline and failure fallback.
 
 The invite-code, invite-link, and independent member flows are implemented as a product prototype. Because this version has no backend database, separate phones do not yet share data in real time. A production version would require authentication, household membership, persistent cloud storage, and synchronization.
 
