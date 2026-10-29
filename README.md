@@ -14,6 +14,7 @@
 
 - **独立成员入口。** 用户可以创建家庭空间并生成邀请码或邀请链接，受邀成员只进入自己的记录页面，也可以随时加入其他家庭或离开当前家庭。
 - **可解释的本地语义分析。** 当前纯前端版由中文语义规则识别家庭领域、行动类型、时长和重复次数，并为每条贡献给出投入分值与原因；正式版可在服务端替换为大模型结构化分析，同时保留离线回退。
+- **分析前补充确认。** 全员提交后、生成劳动地图前，系统会追问模糊的时长或频次，并根据其他成员提到的劳动领域核对当前成员是否遗漏了自己的贡献。正式版可以由大模型生成个性化追问。
 - **收敛后的动态劳动冰山。** 结果只使用“日常生活、照护与关系、家庭运营、出行与活动”四个大领域，直观对照水面上的可见执行与水面下的计划、提醒和跟进。
 - **可横向浏览的多人视角。** 所有成员提交后，系统展示完整原始描述；每个大领域下可左右浏览多件具体工作，并逐条对照成员原话和投入估算。
 - **管理员与多人测试。** 家庭管理员可以添加测试成员、转让管理员和移除普通成员；演示模式可以切换成员视角，方便在一个浏览器中测试三至六人家庭。
@@ -73,6 +74,7 @@ python3 -m http.server 4173 --directory dist
 
 - **Independent member entry.** Create a household, generate an invite code or link, give every member a private input flow, and let users join another household or leave the current one at any time.
 - **Explainable local semantic analysis.** The frontend-only build identifies household domains, action types, duration, and repetition, then shows an effort score and reason for every contribution. The analysis boundary can later be replaced by server-side structured model output with a local fallback.
+- **Pre-analysis clarification.** After everyone submits and before the labor map is generated, the app asks for missing duration or frequency details and checks whether a member omitted contributions in domains mentioned by other household members. A production model can generate individualized follow-up questions.
 - **Focused labor iceberg.** Results are consolidated into four umbrella domains and contrast visible execution above water with planning, reminders, coordination, and follow-up below the surface.
 - **Swipeable multi-member comparison.** Once everyone submits, the product shows every complete original description and lets users browse multiple concrete tasks inside each domain while comparing member wording and estimated effort.
 - **Administrator and multi-member testing.** The household administrator can add test members, transfer the administrator role, and remove ordinary members. Demo-mode perspective switching supports testing households of three to six people in one browser.

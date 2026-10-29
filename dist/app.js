@@ -39,7 +39,7 @@ const DEMO_C = "这周我接送孩子上了两次兴趣班，和老师确认了�
 const DEMO_TEXTS = [DEMO_A, DEMO_B, DEMO_C];
 const MEMBER_COLORS = ["a", "b", "c", "d", "e", "f"];
 
-let state = normalizeState(loadState()) || { family: null, currentMemberId: null, assignments: {}, demo: false };
+let state = normalizeState(loadState()) || { family: null, currentMemberId: null, assignments: {}, clarifications: {}, demo: false };
 let currentAnalysis = null;
 let activeDomain = null;
 let activeTopic = null;
@@ -52,6 +52,7 @@ function loadState() {
 function normalizeState(saved) {
   if (!saved?.family?.members?.length) return saved;
   saved.assignments ||= {};
+  saved.clarifications ||= {};
   saved.family.ownerId ||= saved.family.members[0].id;
   saved.family.members.forEach((member, index) => {
     member.role = member.id === saved.family.ownerId ? "owner" : "member";
@@ -72,7 +73,7 @@ function showToast(message) {
   clearTimeout(showToast.timer); showToast.timer = setTimeout(() => toast.classList.remove("show"), 2300);
 }
 function showSection(id) {
-  ["hero", "onboarding", "familySpace", "recordSpace", "waitingSpace", "results"].forEach((section) => $(`#${section}`).classList.add("hidden"));
+  ["hero", "onboarding", "familySpace", "recordSpace", "waitingSpace", "clarifySpace", "results"].forEach((section) => $(`#${section}`).classList.add("hidden"));
   $(`#${id}`).classList.remove("hidden"); window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -91,22 +92,25 @@ function parseCount(value) {
 }
 function estimateEffort(sentence, actions) {
   const weights = { planning: 2.2, reminder: 1.8, coordination: 2.4, execution: 3, followup: 2.2 };
-  let score = [...new Set(actions)].reduce((sum, action) => sum + (weights[action] || 1.5), 0);
+  const uniqueActions = [...new Set(actions)];
+  let score = uniqueActions.reduce((sum, action) => sum + (weights[action] || 1.5), 0);
+  const breakdown = uniqueActions.map((action) => `${ACTIONS[action].name} ${weights[action] || 1.5}`);
   const reasons = [];
-  if (/全天候|一整天|整天|全天/.test(sentence)) { score += 6; reasons.push("长时间在场"); }
-  else if (/半天/.test(sentence)) { score += 4; reasons.push("半天投入"); }
-  else if (/\d+\s*小时|[一二三四五六七八九十两]+\s*个?小时/.test(sentence)) { score += 3; reasons.push("明确时长"); }
+  if (/全天候|一整天|整天|全天/.test(sentence)) { score += 6; reasons.push("长时间在场"); breakdown.push("全天投入 +6"); }
+  else if (/半天/.test(sentence)) { score += 4; reasons.push("半天投入"); breakdown.push("半天投入 +4"); }
+  else if (/\d+\s*小时|[一二三四五六七八九十两]+\s*个?小时/.test(sentence)) { score += 3; reasons.push("明确时长"); breakdown.push("明确时长 +3"); }
   const repeat = sentence.match(/(\d+|[一二三四五六七八九十两]+)\s*次/);
   if (repeat) {
-    const count = parseCount(repeat[1]); score += Math.min(4, Math.max(0, count - 1)); reasons.push(`${count} 次重复`);
+    const count = parseCount(repeat[1]); const repeatScore = Math.min(4, Math.max(0, count - 1)); score += repeatScore; reasons.push(`${count} 次重复`); breakdown.push(`${count} 次重复 +${repeatScore}`);
   }
-  if (/盯|监督|值守|陪同|来回|搬运|清洁现场|照护/.test(sentence)) { score += 2; reasons.push("持续现场投入"); }
+  if (/盯|监督|值守|陪同|来回|搬运|清洁现场|照护/.test(sentence)) { score += 2; reasons.push("持续现场投入"); breakdown.push("持续现场 +2"); }
   if (!reasons.length) {
     if (/预约|联系|确认|安排|查|比较/.test(sentence)) reasons.push("计划与协调");
     else if (actions.includes("execution")) reasons.push("实际执行");
     else reasons.push("持续心智投入");
   }
-  return { value: Math.max(1, Math.min(12, Math.round(score))), reason: reasons.slice(0, 2).join("、") };
+  const value = Math.max(1, Math.min(12, Math.round(score)));
+  return { value, reason: reasons.slice(0, 2).join("、"), breakdown: `${breakdown.join(" + ")} ≈ ${value} 点` };
 }
 function analyzeText(text, memberId) {
   const sentences = splitSentences(text).map((sentence, index) => {
@@ -165,7 +169,7 @@ function closeLeaveModal() { $("#leaveModal").classList.add("hidden"); }
 
 function leaveFamily() {
   const familyName = state.family?.name || "当前家庭";
-  state = { family: null, currentMemberId: null, assignments: {}, demo: false };
+  state = { family: null, currentMemberId: null, assignments: {}, clarifications: {}, demo: false };
   localStorage.removeItem(STORAGE_KEY);
   history.replaceState({}, "", location.pathname);
   closeLeaveModal();
@@ -176,7 +180,7 @@ function leaveFamily() {
 function createFamily() {
   const familyName = $("#familyName").value.trim() || "我们的家";
   const ownerName = $("#ownerName").value.trim() || "我";
-  state = { family: { name: familyName, code: makeCode("HM"), ownerId: "a", members: [{ id: "a", name: ownerName, initial: initials(ownerName), role: "owner", status: "draft", text: "", color: "a" }] }, currentMemberId: "a", assignments: {}, demo: false };
+  state = { family: { name: familyName, code: makeCode("HM"), ownerId: "a", members: [{ id: "a", name: ownerName, initial: initials(ownerName), role: "owner", status: "draft", text: "", color: "a" }] }, currentMemberId: "a", assignments: {}, clarifications: {}, demo: false };
   saveState(); renderFamily(); showSection("familySpace"); showToast("家庭空间已创建，可以邀请家人加入了。");
 }
 
@@ -184,12 +188,12 @@ function joinFamily() {
   const code = $("#inviteCodeInput").value.trim().replace(/\s/g, "").toUpperCase();
   const name = $("#joinName").value.trim();
   if (code.length < 6 || !name) { showToast("请填写完整邀请码和你的称呼。"); return; }
-  state = { family: { name: code === "SG4826" ? "松果之家" : "我们的家", code, ownerId: "a", members: [{ id: "a", name: "林予", initial: "予", role: "owner", status: "submitted", text: DEMO_A, color: "a" }, { id: "b", name, initial: initials(name), role: "member", status: "draft", text: "", color: "b" }] }, currentMemberId: "b", assignments: {}, demo: true };
+  state = { family: { name: code === "SG4826" ? "松果之家" : "我们的家", code, ownerId: "a", members: [{ id: "a", name: "林予", initial: "予", role: "owner", status: "submitted", text: DEMO_A, color: "a" }, { id: "b", name, initial: initials(name), role: "member", status: "draft", text: "", color: "b" }] }, currentMemberId: "b", assignments: {}, clarifications: {}, demo: true };
   saveState(); renderFamily(); showSection("familySpace"); showToast(`你已加入“${state.family.name}”。`);
 }
 
 function loadDemoFamily() {
-  state = { family: { name: "松果之家", code: "SG4826", ownerId: "a", members: [{ id: "a", name: "林予", initial: "予", role: "owner", status: "draft", text: DEMO_A, color: "a" }, { id: "b", name: "周然", initial: "然", role: "member", status: "submitted", text: DEMO_B, color: "b" }] }, currentMemberId: "a", assignments: {}, demo: true };
+  state = { family: { name: "松果之家", code: "SG4826", ownerId: "a", members: [{ id: "a", name: "林予", initial: "予", role: "owner", status: "draft", text: DEMO_A, color: "a" }, { id: "b", name: "周然", initial: "然", role: "member", status: "submitted", text: DEMO_B, color: "b" }] }, currentMemberId: "a", assignments: {}, clarifications: {}, demo: true };
   saveState(); renderFamily(); showSection("familySpace"); showToast("演示家庭已载入。周然已在自己的设备上提交。");
 }
 
@@ -266,12 +270,55 @@ function openRecord() {
   $("#analysisPreview").querySelector("strong").textContent = recognizedSummary(member.text || ""); showSection("recordSpace");
 }
 
+function buildClarificationQuestions(member) {
+  const current = analyzeText(member.text, member.id);
+  const others = state.family.members.filter((item) => item.id !== member.id && item.status === "submitted").map((item) => ({ member: item, data: analyzeText(item.text, item.id) }));
+  const questions = [];
+  const vague = current.sentences.find((item) => /很多|一些|经常|一直|不少|各种|处理|帮忙/.test(item.text) || (!/(?:\d+|[一二三四五六七八九十两]+)\s*(?:次|小时|天|分钟)|全天|半天/.test(item.text) && item.effort.value <= 3));
+  if (vague) questions.push({ type: "detail", context: vague.text, label: "把投入量化", prompt: `“${vague.text}”大约花了多久、发生了几次，或者包含了哪些来回沟通？`, placeholder: "例如：前后沟通了 3 次，总共约 40 分钟。" });
+  const currentCategories = new Set(current.sentences.map((item) => item.fineCategory));
+  const categoryMentions = {};
+  others.forEach(({ member: otherMember, data }) => new Set(data.sentences.map((item) => item.fineCategory)).forEach((key) => {
+    categoryMentions[key] ||= []; categoryMentions[key].push(otherMember.name);
+  }));
+  const omitted = Object.entries(categoryMentions).filter(([key, names]) => !currentCategories.has(key) && names.length >= 2).sort((a, b) => b[1].length - a[1].length)[0]
+    || Object.entries(categoryMentions).filter(([key]) => !currentCategories.has(key)).sort((a, b) => b[1].length - a[1].length)[0];
+  if (omitted) {
+    const [key, names] = omitted;
+    questions.push({ type: "gap", context: CATEGORIES[key].name, label: "核对可能遗漏", prompt: `${names.join("、")}提到了“${CATEGORIES[key].name}”。你在这件事里是否也承担了计划、提醒、采购、现场执行或收尾？`, placeholder: "有的话写下你实际承担的部分；没有可以留空。" });
+  }
+  return questions.slice(0, 2);
+}
+
+function openClarification() {
+  const member = currentMember(); if (!member) return;
+  const questions = buildClarificationQuestions(member);
+  $("#clarificationMemberName").textContent = member.name;
+  $("#clarificationList").innerHTML = questions.length ? questions.map((question, index) => `<article class="clarification-card"><span>${question.label}</span><h3>${escapeHtml(question.prompt)}</h3><textarea data-clarification-answer="${index}" data-context="${escapeHtml(question.context)}" placeholder="${escapeHtml(question.placeholder)}"></textarea></article>`).join("") : `<article class="clarification-card complete"><span>信息完整</span><h3>目前的描述已经包含清晰的劳动事项，可以生成劳动地图。</h3></article>`;
+  showSection("clarifySpace");
+}
+
+function finishClarification(applyAnswers) {
+  const member = currentMember(); if (!member) return;
+  if (applyAnswers) {
+    const additions = $$('[data-clarification-answer]').map((field) => ({ answer: field.value.trim(), context: field.dataset.context })).filter((item) => item.answer);
+    if (additions.length) member.text += additions.map((item) => `\n补充说明（${item.context}）：${item.answer.replace(/[，,、；;。！？!?]+/g, " ")}`).join("");
+  }
+  state.clarifications[member.id] = member.text; state.assignments = {}; saveState(); renderResults(); showSection("results"); showToast("补充确认完成，劳动地图已更新。");
+}
+
+function openAnalysisFlow() {
+  const member = currentMember();
+  if (member && state.clarifications[member.id] === member.text) { renderResults(); showSection("results"); }
+  else openClarification();
+}
+
 function submitRecord() {
   const text = $("#memberInput").value.trim();
   if (text.length < 4) { showToast("至少写下一件你实际承担的事情。"); return; }
-  const member = currentMember(); member.text = text; member.status = "submitted"; state.assignments = {}; saveState(); renderFamily();
+  const member = currentMember(); member.text = text; member.status = "submitted"; state.assignments = {}; delete state.clarifications[member.id]; saveState(); renderFamily();
   const ready = state.family.members.length >= 2 && state.family.members.every((item) => item.status === "submitted");
-  if (ready) { renderResults(); showSection("results"); showToast("记录已提交，共同劳动地图已更新。"); }
+  if (ready) { openClarification(); showToast("记录已提交，请补充两个细节。"); }
   else { showSection("waitingSpace"); showToast("你的记录已提交，正在等待家人。"); }
 }
 
@@ -280,7 +327,7 @@ function simulateFamilySubmission() {
   state.family.members.forEach((member, index) => {
     if (member.id !== state.currentMemberId && member.status !== "submitted") { member.status = "submitted"; member.text ||= DEMO_TEXTS[index % DEMO_TEXTS.length]; }
   });
-  saveState(); renderFamily(); renderResults(); showSection("results"); showToast("家人的演示记录已同步，共同视角已生成。");
+  saveState(); renderFamily(); openClarification(); showToast("家人的演示记录已同步，请补充两个细节。");
 }
 
 async function copyInvite(kind = "link") {
@@ -320,7 +367,7 @@ function renderResults() {
   const heavier = [...currentAnalysis.analyses].sort((a, b) => b.data.mental - a.data.mental)[0];
   const mentalShare = Math.round(heavier.data.mental / totalMental * 100); const visibleShare = Math.round(heavier.data.execution / totalVisible * 100);
   $("#headlineInsight").innerHTML = `${escapeHtml(heavier.member.name)}承担了 <b>${visibleShare}%</b> 的可见执行，同时承担了 <b>${mentalShare}%</b> 的计划、提醒与协调。`;
-  $("#headlineDetail").textContent = "投入估算会同时考虑计划协调、现场时长、重复次数和后续跟进，不按任务数量简单计数。";
+  $("#headlineDetail").textContent = "投入估算综合计划协调、现场时长、重复次数和后续跟进。";
   activeDomain = currentAnalysis.domains[0] || "home";
   activeTopic = currentAnalysis.topics.find((topic) => topic.domain === activeDomain)?.id || "other";
   renderRawRecords(); renderDomainTabs(); renderIceberg(activeDomain); renderTopicCarousel(); renderComparison(activeTopic); renderBalanceSimulator();
@@ -368,10 +415,10 @@ function renderComparison(topicId) {
   $("#compareBadge").textContent = `${memberCount} 位成员 · ${topic.contributions.length} 条具体贡献 · ${totalEffort} 点投入`;
   $("#voiceList").innerHTML = currentAnalysis.members.map((member, index) => {
     const items = topic.contributions.filter((item) => item.memberId === member.id);
-    const cards = items.length ? items.map((item) => `<div class="contribution-quote"><p>“${escapeHtml(item.text)}。”</p><div><span>${item.actions.map((action) => ACTIONS[action].name).join(" · ")}</span><strong>${item.effort.value} 点</strong><small>${item.effort.reason}</small></div></div>`).join("") : `<p class="no-mention">这位成员的记录中没有提到这一具体事项。</p>`;
+    const cards = items.length ? items.map((item) => `<div class="contribution-quote"><p>“${escapeHtml(item.text)}。”</p><div><span>${item.actions.map((action) => ACTIONS[action].name).join(" · ")}</span><strong>${item.effort.value} 点</strong><small>${item.effort.breakdown}</small></div></div>`).join("") : `<p class="no-mention">这位成员的记录中没有提到这一具体事项。</p>`;
     return `<div class="voice-card voice-${index % 2 ? "b" : "a"}"><div class="mini-avatar avatar-${member.color}">${escapeHtml(member.initial)}</div><div class="voice-copy"><strong>${escapeHtml(member.name)}</strong>${cards}</div></div>`;
   }).join("");
-  $("#contributionSummary").innerHTML = `<strong>这里比较的是具体贡献，不是把整件事判给一个人。</strong><p>分值综合自然语言里的现场时长、重复次数、计划协调和持续跟进。例如“预约粉刷匠”会被识别为计划协调；“全天在家盯着粉刷匠”会因长时间在场获得更高投入估算。</p>`;
+  $("#contributionSummary").innerHTML = `<strong>这里逐条比较每位成员的具体贡献。</strong><p>例如“预约粉刷匠”计入计划协调；“全天在家盯着粉刷匠”叠加全天投入和持续现场投入。</p>`;
 }
 
 function balanceFor(assignments = {}) {
@@ -397,7 +444,7 @@ function renderBalanceSimulator() {
     const owner = state.assignments[item.id] || item.memberId;
     const options = members.map((member) => `<option value="${member.id}"${owner === member.id ? " selected" : ""}>${escapeHtml(member.name)}</option>`).join("");
     const original = owner !== item.memberId ? `<small class="original-owner">原记录：${escapeHtml(item.member.name)}</small>` : "";
-    return `<article class="contribution-card" data-contribution-card="${item.id}"><span class="package-handle" draggable="true" data-contribution-drag="${item.id}" title="拖动这条具体劳动">⠿</span><div class="contribution-main"><span>${CATEGORIES[item.fineCategory].icon} ${CATEGORIES[item.fineCategory].name}</span><strong>${escapeHtml(item.text)}</strong><small>${item.effort.reason}</small>${original}</div><b class="effort-score">${item.effort.value}<small>点</small></b><label class="owner-picker contribution-owner"><span>模拟改由</span><select data-contribution-owner="${item.id}">${options}</select></label></article>`;
+    return `<article class="contribution-card" data-contribution-card="${item.id}"><span class="package-handle" draggable="true" data-contribution-drag="${item.id}" title="拖动这条具体劳动">⠿</span><div class="contribution-main"><span>${CATEGORIES[item.fineCategory].icon} ${CATEGORIES[item.fineCategory].name}</span><strong>${escapeHtml(item.text)}</strong><small>${item.effort.breakdown}</small>${original}</div><b class="effort-score">${item.effort.value}<small>点</small></b><label class="owner-picker contribution-owner"><span>模拟改由</span><select data-contribution-owner="${item.id}">${options}</select></label></article>`;
   };
   $("#balanceColumns").innerHTML = members.map((member) => {
     const items = currentAnalysis.contributions.filter((item) => (state.assignments[item.id] || item.memberId) === member.id);
@@ -413,7 +460,7 @@ function renderBalanceSimulator() {
     column.addEventListener("drop", (event) => { event.preventDefault(); const id = event.dataTransfer.getData("text/plain") || draggedContributionId; column.classList.remove("drop-target"); if (id) assignContribution(id, column.dataset.dropMember); });
   });
   $$('[data-contribution-owner]').forEach((select) => select.addEventListener("change", () => assignContribution(select.dataset.contributionOwner, select.value)));
-  $("#actionSummary").innerHTML = changed ? `<strong>当前模拟移动了 ${changed} 条具体劳动，平衡度从 ${baseline.score}% 变为 ${simulated.score}%。</strong>这只是讨论“如果换一种承担方式会怎样”，不会改写任何人的原始记录。` : `<strong>当前平衡度为 ${baseline.score}%。</strong>拖动任意一条具体劳动，就能看到假设由另一位成员承担后，每个人的负担占比和平衡度如何变化。`;
+  $("#actionSummary").innerHTML = changed ? `<strong>已调整 ${changed} 条具体劳动，平衡度从 ${baseline.score}% 变为 ${simulated.score}%。</strong>继续拖动卡片可以比较其他分配方案。` : `<strong>当前平衡度为 ${baseline.score}%。</strong>拖动任意一条具体劳动，查看另一种承担方式下的成员占比和平衡度。`;
 }
 function assignContribution(id, ownerId) {
   const item = currentAnalysis.contributions.find((contribution) => contribution.id === id); if (!item) return;
@@ -450,7 +497,10 @@ $("#memberInput").addEventListener("input", (event) => $("#analysisPreview").que
 $$('[data-prompt]').forEach((button) => button.addEventListener("click", () => { const field = $("#memberInput"); field.value += `${field.value ? "\n" : ""}${button.dataset.prompt}`; field.focus(); field.dispatchEvent(new Event("input")); }));
 $("#submitRecordButton").addEventListener("click", submitRecord); $("#simulateFamilyButton").addEventListener("click", simulateFamilySubmission);
 $("#copyCodeButton").addEventListener("click", () => copyInvite("code")); $("#copyLinkButton").addEventListener("click", () => copyInvite("link")); $("#waitingCopyLink").addEventListener("click", () => copyInvite("link"));
-$("#viewResultsButton").addEventListener("click", () => { renderResults(); showSection("results"); }); $("#resultsBack").addEventListener("click", () => { renderFamily(); showSection("familySpace"); });
+$("#viewResultsButton").addEventListener("click", openAnalysisFlow); $("#resultsBack").addEventListener("click", () => { renderFamily(); showSection("familySpace"); });
+$("#backFromClarification").addEventListener("click", () => { renderFamily(); showSection("familySpace"); });
+$("#applyClarificationButton").addEventListener("click", () => finishClarification(true));
+$("#skipClarificationButton").addEventListener("click", () => finishClarification(false));
 $("#topicPrev").addEventListener("click", () => $("#topicCarousel").scrollBy({ left: -280, behavior: "smooth" }));
 $("#topicNext").addEventListener("click", () => $("#topicCarousel").scrollBy({ left: 280, behavior: "smooth" }));
 $("#resetSimulationButton").addEventListener("click", resetSimulation);
