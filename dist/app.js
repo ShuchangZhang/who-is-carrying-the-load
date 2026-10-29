@@ -3,25 +3,25 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 const STORAGE_KEY = "who_cares_family_v2";
 
 const CATEGORIES = {
-  health: { name: "健康照护", icon: "🩺", keywords: ["医院", "体检", "看病", "吃药", "药房", "复诊", "健康", "生病", "医生"], steps: ["发现健康需求", "比较医院与时间", "完成预约", "准备证件", "设置提醒", "现场陪同", "记录医嘱", "后续观察"] },
-  meals: { name: "一周饮食", icon: "🍲", keywords: ["做饭", "顿饭", "晚饭", "早餐", "午饭", "吃什么", "食材", "菜", "烹饪", "外卖"], steps: ["确认家人时间", "决定吃什么", "查看现有食材", "考虑营养与忌口", "列采购清单", "完成烹饪", "处理剩余食材", "计划下一餐"] },
-  inventory: { name: "日用品库存", icon: "🧻", keywords: ["日用品", "库存", "快用完", "采购", "买菜", "购物", "超市", "纸巾", "洗衣液"], steps: ["留意消耗速度", "检查现有库存", "比较购买渠道", "列出清单", "完成购买", "核对遗漏", "分类归位", "预测下次补充"] },
-  cleaning: { name: "清洁整理", icon: "🧹", keywords: ["打扫", "洗碗", "垃圾", "清洁", "保洁", "洗衣", "收拾", "整理", "拖地"], steps: ["发现需要清理", "安排清洁时间", "准备清洁用品", "完成清洁", "分类与归位", "处理垃圾", "检查遗漏", "维持日常秩序"] },
-  bills: { name: "家庭账单", icon: "🧾", keywords: ["账单", "水电", "缴费", "报销", "预算", "房租", "物业", "保险", "费用"], steps: ["记住截止日期", "核对金额", "协调家庭预算", "完成缴费", "保存凭证", "检查扣款", "记录支出", "提醒下个周期"] },
-  repair: { name: "家庭维修", icon: "🔧", keywords: ["维修", "修好", "坏了", "水龙头", "灯泡", "师傅", "安装", "漏水", "家具", "粉刷", "粉刷匠", "油漆", "装修"], steps: ["发现故障", "判断紧急程度", "查找解决办法", "购买配件", "联系维修人员", "现场维修", "清理现场", "检查是否复发"] },
-  transport: { name: "出行与车辆", icon: "🚗", keywords: ["开车", "接送", "加油", "车辆", "洗车", "通勤", "停车", "保养", "车"], steps: ["确认出发时间", "规划路线", "协调接送", "检查车辆状态", "准备随身物品", "现场执行", "处理停车与加油", "安排维护"] },
-  children: { name: "孩子成长", icon: "🎒", keywords: ["孩子", "学校", "老师", "作业", "家长会", "兴趣班", "幼儿园", "辅导", "学习"], steps: ["留意孩子状态", "查看学校通知", "协调家庭时间", "准备材料", "提醒重要节点", "陪伴完成", "与老师沟通", "跟进后续变化"] },
-  outings: { name: "家庭活动", icon: "⛺", keywords: ["周末", "出游", "旅行", "门票", "露营", "订票", "酒店", "天气", "行程"], steps: ["提出备选方案", "确认家人偏好", "查看天气", "比较预算", "完成预订", "准备随身物品", "规划路线", "安排返程"] },
-  pets: { name: "宠物照护", icon: "🐕", keywords: ["宠物", "狗", "猫", "猫砂", "狗粮", "猫粮", "兽医", "疫苗", "铲屎"], patterns: [/遛.*狗/, /喂.*(?:狗|猫)/, /(?:狗|猫).*(?:洗澡|看病|吃药)/], steps: ["留意宠物状态", "安排喂食与活动", "检查食物用品", "遛狗或陪伴活动", "清理排泄与环境", "安排洗护或就医", "设置用药提醒", "持续观察变化"] },
-  relationships: { name: "亲友联络", icon: "💬", keywords: ["父母", "家人", "老人", "电话", "生日", "礼物", "聚会", "亲戚", "朋友"], steps: ["记住重要日期", "留意亲友情绪", "协调联系时间", "准备礼物", "主动联络", "安排见面", "传达家庭信息", "后续关心"] },
-  other: { name: "其他家庭事务", icon: "🏠", keywords: [], steps: ["发现需要处理", "明确任务边界", "收集必要信息", "安排时间", "完成执行", "告知相关成员", "检查结果", "记录下次提醒"] }
+  health: { name: "健康照护", keywords: ["医院", "体检", "看病", "吃药", "药房", "复诊", "健康", "生病", "医生"], steps: ["发现健康需求", "比较医院与时间", "完成预约", "准备证件", "设置提醒", "现场陪同", "记录医嘱", "后续观察"] },
+  meals: { name: "一周饮食", keywords: ["做饭", "顿饭", "晚饭", "早餐", "午饭", "吃什么", "食材", "菜", "烹饪", "外卖"], steps: ["确认家人时间", "决定吃什么", "查看现有食材", "考虑营养与忌口", "列采购清单", "完成烹饪", "处理剩余食材", "计划下一餐"] },
+  inventory: { name: "日用品库存", keywords: ["日用品", "库存", "快用完", "采购", "买菜", "购物", "超市", "纸巾", "洗衣液"], steps: ["留意消耗速度", "检查现有库存", "比较购买渠道", "列出清单", "完成购买", "核对遗漏", "分类归位", "预测下次补充"] },
+  cleaning: { name: "清洁整理", keywords: ["打扫", "洗碗", "垃圾", "清洁", "保洁", "洗衣", "收拾", "整理", "拖地"], steps: ["发现需要清理", "安排清洁时间", "准备清洁用品", "完成清洁", "分类与归位", "处理垃圾", "检查遗漏", "维持日常秩序"] },
+  bills: { name: "家庭账单", keywords: ["账单", "水电", "缴费", "报销", "预算", "房租", "物业", "保险", "费用"], steps: ["记住截止日期", "核对金额", "协调家庭预算", "完成缴费", "保存凭证", "检查扣款", "记录支出", "提醒下个周期"] },
+  repair: { name: "家庭维修", keywords: ["维修", "修好", "坏了", "水龙头", "灯泡", "师傅", "安装", "漏水", "家具", "粉刷", "粉刷匠", "油漆", "装修"], steps: ["发现故障", "判断紧急程度", "查找解决办法", "购买配件", "联系维修人员", "现场维修", "清理现场", "检查是否复发"] },
+  transport: { name: "出行与车辆", keywords: ["开车", "接送", "加油", "车辆", "洗车", "通勤", "停车", "保养", "车"], steps: ["确认出发时间", "规划路线", "协调接送", "检查车辆状态", "准备随身物品", "现场执行", "处理停车与加油", "安排维护"] },
+  children: { name: "孩子成长", keywords: ["孩子", "学校", "老师", "作业", "家长会", "兴趣班", "幼儿园", "辅导", "学习"], steps: ["留意孩子状态", "查看学校通知", "协调家庭时间", "准备材料", "提醒重要节点", "陪伴完成", "与老师沟通", "跟进后续变化"] },
+  outings: { name: "家庭活动", keywords: ["周末", "出游", "旅行", "门票", "露营", "订票", "酒店", "天气", "行程"], steps: ["提出备选方案", "确认家人偏好", "查看天气", "比较预算", "完成预订", "准备随身物品", "规划路线", "安排返程"] },
+  pets: { name: "宠物照护", keywords: ["宠物", "狗", "猫", "猫砂", "狗粮", "猫粮", "兽医", "疫苗", "铲屎"], patterns: [/遛.*狗/, /喂.*(?:狗|猫)/, /(?:狗|猫).*(?:洗澡|看病|吃药)/], steps: ["留意宠物状态", "安排喂食与活动", "检查食物用品", "遛狗或陪伴活动", "清理排泄与环境", "安排洗护或就医", "设置用药提醒", "持续观察变化"] },
+  relationships: { name: "亲友联络", keywords: ["父母", "家人", "老人", "电话", "生日", "礼物", "聚会", "亲戚", "朋友"], steps: ["记住重要日期", "留意亲友情绪", "协调联系时间", "准备礼物", "主动联络", "安排见面", "传达家庭信息", "后续关心"] },
+  other: { name: "其他家庭事务", keywords: [], steps: ["发现需要处理", "明确任务边界", "收集必要信息", "安排时间", "完成执行", "告知相关成员", "检查结果", "记录下次提醒"] }
 };
 
 const DOMAINS = {
-  daily: { name: "日常生活", icon: "🍲", categories: ["meals", "inventory", "cleaning"] },
-  care: { name: "照护与关系", icon: "🤲", categories: ["health", "children", "pets", "relationships"] },
-  home: { name: "家庭运营", icon: "🏠", categories: ["bills", "repair", "other"] },
-  mobility: { name: "出行与活动", icon: "🚗", categories: ["transport", "outings"] }
+  daily: { name: "日常生活", categories: ["meals", "inventory", "cleaning"] },
+  care: { name: "照护与关系", categories: ["health", "children", "pets", "relationships"] },
+  home: { name: "家庭运营", categories: ["bills", "repair", "other"] },
+  mobility: { name: "出行与活动", categories: ["transport", "outings"] }
 };
 const CATEGORY_DOMAIN = Object.fromEntries(Object.entries(DOMAINS).flatMap(([domain, value]) => value.categories.map((category) => [category, domain])));
 
@@ -70,9 +70,9 @@ function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 function initials(name) { return (name || "家").slice(-1); }
 function memberColorHex(member) { return member?.customColor || MEMBER_COLOR_OPTIONS[member?.color]?.hex || MEMBER_COLOR_OPTIONS.a.hex; }
 function escapeHtml(value = "") { return value.replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char])); }
-// 领域标签统一从这里输出，以后换图标或去掉图标只改这一处。
-function categoryLabel(key) { return `${CATEGORIES[key].icon} ${CATEGORIES[key].name}`; }
-function domainLabel(key) { return `${DOMAINS[key].icon} ${DOMAINS[key].name}`; }
+// 领域只用文字标签，不配图标。
+function categoryLabel(key) { return CATEGORIES[key].name; }
+function domainLabel(key) { return DOMAINS[key].name; }
 function balanceLabel(score) { return score >= 90 ? "基本均衡" : score >= 75 ? "有点偏" : "明显偏向一方"; }
 function makeCode(name) {
   const letters = (name.match(/[A-Za-z]/g) || ["H", "M"]).join("").slice(0, 2).toUpperCase().padEnd(2, "H");
@@ -395,7 +395,6 @@ function buildCombinedAnalysis() {
   const topics = categoryKeys.map((key) => ({
     id: key,
     name: CATEGORIES[key].name,
-    icon: CATEGORIES[key].icon,
     domain: CATEGORY_DOMAIN[key] || "home",
     contributions: contributions.filter((item) => item.fineCategory === key)
   })).sort((a, b) => b.contributions.reduce((sum, item) => sum + item.effort.value, 0) - a.contributions.reduce((sum, item) => sum + item.effort.value, 0));
