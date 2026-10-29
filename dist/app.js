@@ -452,9 +452,14 @@ function renderIceberg(domain) {
   const containsMentalWork = (item) => item.actions.some((action) => action !== "execution");
   const visible = items.filter((item) => item.actions.includes("execution") && !containsMentalWork(item));
   const hidden = items.filter(containsMentalWork);
-  const row = (item, marked) => `<li style="--member-color:${memberColorHex(item.member)}"><b>${escapeHtml(item.member.name)}</b>${marked ? `<mark>${escapeHtml(item.text)}</mark>` : `<span>${escapeHtml(item.text)}</span>`}</li>`;
-  $("#visibleTaskList").innerHTML = visible.length ? `<ul>${visible.map((item) => row(item, false)).join("")}</ul>` : `<p class="empty">这一类里，没人写到亲手做的事。</p>`;
-  $("#hiddenTaskList").innerHTML = hidden.length ? `<ul>${hidden.map((item) => row(item, true)).join("")}</ul>` : `<p class="empty">这一类里，没人写到安排、记着或跟进的事。</p>`;
+  const chip = (item, marked) => `<span class="ice-item" style="--member-color:${memberColorHex(item.member)}" title="${escapeHtml(item.text)}"><b>${escapeHtml(item.member.name)}</b>${marked ? `<mark>${escapeHtml(shorten(item.text, 16))}</mark>` : escapeHtml(shorten(item.text, 16))}</span>`;
+  const zone = (list, limit, marked, emptyText) => {
+    if (!list.length) return `<span class="empty">${emptyText}</span>`;
+    const rest = list.length - limit;
+    return list.slice(0, limit).map((item) => chip(item, marked)).join("") + (rest > 0 ? `<span class="ice-more">还有 ${rest} 件，见下方</span>` : "");
+  };
+  $("#visibleTaskList").innerHTML = zone(visible, 4, false, "这一类里，没人写到亲手做的事。");
+  $("#hiddenTaskList").innerHTML = zone(hidden, 9, true, "这一类里，没人写到安排、记着或跟进的事。");
 }
 
 function renderTopicCarousel() {

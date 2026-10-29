@@ -14,6 +14,8 @@
   --mark: #f3e05a;
   --danger: #b23a2b;
   --positive: #2f8558;
+  --water-tint: #e8eff0;
+  --water-line: #9fb3b6;
 
   --hand: "LXGW WenKai Screen", "Kaiti SC", "STKaiti", "KaiTi", serif;
   --sans: system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
@@ -339,19 +341,64 @@ input[type="text"]:focus, textarea:focus, select:focus { border-color: var(--ink
 .category-tabs button.active, .topic-tabs button.active { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
 .topic-tabs { margin-top: 16px; }
 
-.iceberg { margin-top: 32px; display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 48px; align-items: start; }
-.iceberg-art { width: 100%; height: auto; position: sticky; top: 24px; }
-.ice-label { color: var(--pencil); font-size: var(--t-xs); margin-bottom: 8px; }
-.ice-hidden .empty, .ice-visible .empty { padding: 4px 0; }
-.iceberg ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
-.iceberg li { display: grid; grid-template-columns: 5em minmax(0, 1fr); gap: 16px; font-size: var(--t-m); line-height: 1.8; }
-.iceberg li b { color: var(--member-color); font-weight: 600; font-size: var(--t-s); line-height: 1.8rem; }
-.iceberg li > span, .iceberg li > mark { justify-self: start; }
-.ice-visible { padding-bottom: 16px; }
-.ice-hidden { padding-top: 0; }
-.waterline { margin-bottom: 12px; }
-.waterline svg { display: block; width: 100%; height: 12px; }
-.waterline path { fill: none; stroke: var(--pencil); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+/* 劳动冰山：事项直接叠在冰山上。水面线在图片高度的 28.9% 处，舞台高度与图片同高，水面位置随之对齐。 */
+.iceberg-stage {
+  --stage-h: 600px;
+  --water: 28.9%;
+  position: relative;
+  height: var(--stage-h);
+  margin-top: 24px;
+  border-radius: var(--r-m);
+  overflow: hidden;
+  background: linear-gradient(var(--sheet) 0 var(--water), var(--water-tint) var(--water) 100%);
+}
+.iceberg-stage::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--water);
+  border-top: 1px dashed var(--water-line);
+}
+.iceberg-art {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100%;
+  width: auto;
+  max-width: none;
+  transform: translateX(-50%);
+  opacity: .8;
+  pointer-events: none;
+}
+.ice-label { position: absolute; left: 16px; z-index: 2; color: var(--pencil); font-size: var(--t-xs); }
+.label-visible { top: 12px; }
+.label-hidden { top: calc(var(--water) + 10px); }
+.ice-zone {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(640px, calc(100% - 32px));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: flex-start;
+  gap: 8px;
+}
+.ice-visible { top: 44px; height: calc(var(--water) - 56px); align-content: flex-end; }
+.ice-hidden { top: calc(var(--water) + 44px); bottom: 32px; align-content: center; }
+.ice-item {
+  max-width: 100%;
+  padding: 4px 10px;
+  border-radius: var(--r-s);
+  background: rgba(255, 255, 255, .9);
+  font-size: var(--t-s);
+  line-height: 1.6;
+}
+.ice-item b { margin-right: 6px; color: var(--member-color); font-weight: 600; }
+.ice-more { padding: 4px 10px; color: var(--pencil); font-size: var(--t-xs); align-self: center; }
+.ice-zone .empty { padding: 4px 10px; border-radius: var(--r-s); background: rgba(255, 255, 255, .85); }
 .empty { color: var(--pencil); font-size: var(--t-s); }
 
 .fine-print { margin-top: 24px; font-size: var(--t-s); color: var(--pencil); }
@@ -500,9 +547,10 @@ input[type="text"]:focus, textarea:focus, select:focus { border-color: var(--ink
   .result-intro { margin: 32px 0 40px; }
   #headlineDetail { font-size: var(--t-m); }
   .result-block { padding: 32px 0; }
-  .iceberg { grid-template-columns: minmax(0, 1fr); gap: 24px; }
-  .iceberg-art { position: static; width: 180px; justify-self: center; }
-  .iceberg li { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .iceberg-stage { --stage-h: 520px; }
+  .ice-item { font-size: var(--t-xs); padding: 3px 8px; }
+  .ice-visible { top: 36px; height: calc(var(--water) - 44px); }
+  .ice-hidden { top: calc(var(--water) + 36px); }
   .balance-score { gap: 32px; }
   .burden-row { grid-template-columns: 4em minmax(0, 1fr) auto; gap: 12px; }
   .balance-layout { grid-template-columns: minmax(0, 1fr); }

@@ -7,7 +7,7 @@
     <meta name="description" content="家里每个人在自己的手机上写下这一周操心的事，写完再放在一起看。" />
     <title>谁在操心</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.7.0/lxgwwenkaigbscreen.css" />
-    <link rel="stylesheet" href="styles.css?v=20261029-14" />
+    <link rel="stylesheet" href="styles.css?v=20261029-15" />
   </head>
   <body>
     <div class="page-shell">
@@ -145,18 +145,15 @@
           </div>
 
           <section class="result-block">
-            <div class="block-head"><h3>水面上，水面下</h3></div>
+            <div class="block-head"><h3>劳动冰山</h3></div>
             <p class="block-lede">做完的事大家看得见。提前安排、一直记着、事后跟进的那些，往往没人看见。</p>
             <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="家务领域"></div>
-            <div class="iceberg">
+            <div class="iceberg-stage">
               <img class="iceberg-art" src="assets/iceberg-gouache.png" alt="水彩冰山，水面下的部分比水面上大得多" width="1145" height="1374" />
-              <div class="iceberg-lists">
-                <p class="ice-label">水面上：做完的事</p>
-                <div class="ice-visible" id="visibleTaskList"></div>
-                <div class="waterline" aria-hidden="true"><svg viewBox="0 0 600 12" preserveAspectRatio="none"><path d="M0 6 Q 25 0 50 6 T 100 6 T 150 6 T 200 6 T 250 6 T 300 6 T 350 6 T 400 6 T 450 6 T 500 6 T 550 6 T 600 6" /></svg></div>
-                <p class="ice-label">水面下：安排、记着、跟进</p>
-                <div class="ice-hidden" id="hiddenTaskList"></div>
-              </div>
+              <span class="ice-label label-visible">水面上：做完的事</span>
+              <span class="ice-label label-hidden">水面下：安排、记着、跟进</span>
+              <div class="ice-zone ice-visible" id="visibleTaskList"></div>
+              <div class="ice-zone ice-hidden" id="hiddenTaskList"></div>
             </div>
             <details class="fine-print"><summary>怎么分水面上和水面下？</summary><p>实打实做完的动作放在水面上，比如“洗了碗”“给爸妈打了电话”。查、约、记着、提醒、联系和跟进放在水面下，比如“约了钢琴调音”“记着给爸妈打电话”。一句话两种都有，就算水面下。</p></details>
           </section>
@@ -206,6 +203,6 @@
       </div>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="app.js?v=20261029-14"></script>
+    <script src="app.js?v=20261029-15"></script>
   </body>
 </html>
